@@ -110,6 +110,8 @@ class ConnectionProvider extends ChangeNotifier {
   //   3b. Token invalid/missing → set needsAuth, caller shows password dialog
 
   Future<void> connect(String input) async {
+    bool authRequired = false;
+
     _rawInput  = input.trim();
     _isTunnel  = _detectTunnel(_rawInput);
     _error     = null;
@@ -127,10 +129,17 @@ class ConnectionProvider extends ChangeNotifier {
       if (health['status'] != 'ok' && health['status'] != 'degraded') {
         throw Exception('Server unhealthy: ${health['status']}');
       }
+      authRequired = health['auth_required'] == true;
     } catch (e) {
       _error = e.toString();
       _connState = ConnState.error;
       notifyListeners();
+      return;
+    }
+
+    if (!authRequired) {
+      await _save();
+      _connectWs(base);
       return;
     }
 

@@ -681,19 +681,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
 class _PrefToggle extends StatelessWidget {
   const _PrefToggle({required this.label, required this.val, required this.onChanged});
   final String label; final bool val; final void Function(bool) onChanged;
-  @override Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(label, style: const TextStyle(color: Bk.textPri, fontSize: 13, fontWeight: FontWeight.w700)),
-      Switch(
-        value: val,
-        onChanged: onChanged,
-        activeColor: Bk.cyan,
-        activeTrackColor: Bk.cyan.withOpacity(0.3),
-        inactiveTrackColor: Bk.surface2,
-        inactiveThumbColor: Bk.textDim,
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => onChanged(!val),
+    borderRadius: BorderRadius.circular(14),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: const TextStyle(
+              color: Bk.textPri, fontSize: 13, fontWeight: FontWeight.w700)),
+          ),
+          _TogglePill(value: val),
+        ],
       ),
-    ],
+    ),
+  );
+}
+
+class _TogglePill extends StatelessWidget {
+  const _TogglePill({required this.value});
+  final bool value;
+
+  @override
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: const Duration(milliseconds: 180),
+    curve: Curves.easeOutCubic,
+    width: 72,
+    height: 36,
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: value ? Bk.white.withOpacity(0.12) : Bk.surface2,
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: value ? Bk.white : Bk.border),
+    ),
+    child: Stack(
+      children: [
+        AnimatedAlign(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: value ? Bk.white : Bk.textDim,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('OFF', style: TextStyle(
+                color: value ? Bk.textDim : Bk.textPri,
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2)),
+              Text('ON', style: TextStyle(
+                color: value ? Bk.oled : Bk.textDim,
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2)),
+            ],
+          ),
+        ),
+      ],
+    ),
   );
 }
 

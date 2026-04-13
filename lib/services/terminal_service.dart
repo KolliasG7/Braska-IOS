@@ -77,7 +77,11 @@ class TerminalService {
 
     _sub = _ch!.stream.listen(
       (raw) {
-        if (raw is String) _outCtrl.add(raw);
+        if (raw is String) {
+          _outCtrl.add(raw);
+        } else if (raw is List<int>) {
+          _outCtrl.add(utf8.decode(raw, allowMalformed: true));
+        }
       },
       onError: (e) {
         print('[TermService] WebSocket onError! $e');

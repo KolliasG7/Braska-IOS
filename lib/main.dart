@@ -56,7 +56,7 @@ class _Root extends StatelessWidget {
           position: Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero).animate(anim),
           child: child)),
       child: switch (cp.connState) {
-        ConnState.connected || ConnState.connecting =>
+        ConnState.connected =>
           const DashboardScreen(key: ValueKey('dash')),
         // needsAuth shows ConnectScreen which handles the password dialog
         _ => const ConnectScreen(key: ValueKey('connect')),

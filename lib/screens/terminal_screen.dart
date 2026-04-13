@@ -40,9 +40,9 @@ class _TerminalScreenState extends State<TerminalScreen> with WidgetsBindingObse
 
   void _onOutput(String text) {
     // Strip ANSI escape codes for simple rendering
-    final clean = text.replaceAll(RegExp(r'\x1B\[[0-9;]*[mKHJABCDEFG]'), '')
-                       .replaceAll(RegExp(r'\x1B\[\?[0-9;]*[hl]'), '')
-                       .replaceAll(RegExp(r'\x1B\[[0-9;]*[r]'), '')
+    final clean = text.replaceAll(RegExp(r'\x1B\][^\x07]*\x07'), '')
+                       .replaceAll(RegExp(r'\x1B\][^\x1B]*\x1B\\'), '')
+                       .replaceAll(RegExp(r'\x1B\[[0-9;?]*[ -/]*[@-~]'), '')
                        .replaceAll('\r\n', '\n')
                        .replaceAll('\r', '\n');
 
