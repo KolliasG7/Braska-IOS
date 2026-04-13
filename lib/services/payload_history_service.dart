@@ -1,4 +1,4 @@
-// lib/services/payload_history_service.dart — Braška payload history
+// lib/services/payload_history_service.dart — Strawberry Manager payload history
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 

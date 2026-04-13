@@ -1,4 +1,4 @@
-// lib/main.dart — Braška by rmux
+// lib/main.dart — Strawberry Manager by rmux
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -22,14 +22,14 @@ void main() async {
 
   final cp = ConnectionProvider();
   await cp.loadSaved();
-  runApp(ChangeNotifierProvider.value(value: cp, child: const BraskaApp()));
+  runApp(ChangeNotifierProvider.value(value: cp, child: const StrawberryManagerApp()));
 }
 
-class BraskaApp extends StatelessWidget {
-  const BraskaApp({super.key});
+class StrawberryManagerApp extends StatelessWidget {
+  const StrawberryManagerApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title:                      'Braška',
+    title:                      'Strawberry Manager',
     debugShowCheckedModeBanner: false,
     theme:                      buildTheme(),
     home:                       const _Root(),

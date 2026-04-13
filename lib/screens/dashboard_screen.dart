@@ -144,11 +144,11 @@ class _TopBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
       child: Row(children: [
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('BRAŠKA', style: TextStyle(
+          const Text('STRAWBERRY', style: TextStyle(
             color: Bk.textPri, fontSize: 16,
-            fontWeight: FontWeight.w900, letterSpacing: 3)),
+            fontWeight: FontWeight.w900, letterSpacing: 2.5)),
           if (frame != null)
-            Text(frame!.uptimeFormatted, style: const TextStyle(
+            Text('MANAGER  ·  ${frame!.uptimeFormatted}', style: const TextStyle(
               color: Bk.textDim, fontSize: 9, letterSpacing: 1.5)),
         ]),
         const Spacer(),

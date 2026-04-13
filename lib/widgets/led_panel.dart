@@ -1,4 +1,4 @@
-// lib/widgets/led_panel.dart — Braška LED control with LiquidGlassBlendGroup
+// lib/widgets/led_panel.dart — Strawberry Manager LED control with LiquidGlassBlendGroup
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../theme.dart';

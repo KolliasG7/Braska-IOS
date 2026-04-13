@@ -1,4 +1,4 @@
-// lib/screens/connect_screen.dart — Braška landing
+// lib/screens/connect_screen.dart — Strawberry Manager landing
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -78,7 +78,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
             style: TextStyle(color: Bk.textPri, fontSize: 15,
               fontWeight: FontWeight.w900, letterSpacing: 2)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Enter the Braška backend password.',
+            const Text('Enter Strawberry Manager password.',
               style: TextStyle(color: Bk.textSec, fontSize: 12, height: 1.5)),
             const SizedBox(height: 16),
             TextField(
@@ -182,12 +182,16 @@ class _ConnectScreenState extends State<ConnectScreen> {
               child: Column(children: [
                 const SizedBox(height: 60),
 
-                const _BraskaLogo(),
+                const _StrawberryLogo(),
                 const SizedBox(height: 28),
 
-                const Text('BRAŠKA', style: TextStyle(
+                const Text('STRAWBERRY', style: TextStyle(
                   color: Bk.textPri, fontSize: 28,
-                  fontWeight: FontWeight.w900, letterSpacing: 8)),
+                  fontWeight: FontWeight.w900, letterSpacing: 5)),
+                const SizedBox(height: 6),
+                const Text('MANAGER', style: TextStyle(
+                  color: Bk.white, fontSize: 12,
+                  fontWeight: FontWeight.w900, letterSpacing: 6)),
                 const SizedBox(height: 6),
                 const Text('PLAYSTATION 4 · LINUX', style: TextStyle(
                   color: Bk.textDim, fontSize: 10, letterSpacing: 4)),
@@ -410,7 +414,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 24),
                   child: Text(
-                    'by rmux  ·  Braška 🍓',
+                    'by rmux  ·  Strawberry Manager 🍓',
                     style: TextStyle(
                       color: Bk.textDim.withOpacity(0.5),
                       fontSize: 10, letterSpacing: 1)),
@@ -664,8 +668,8 @@ class _RecentPayloadTile extends StatelessWidget {
 
 // ── Logo ──────────────────────────────────────────────────────────────────
 
-class _BraskaLogo extends StatelessWidget {
-  const _BraskaLogo();
+class _StrawberryLogo extends StatelessWidget {
+  const _StrawberryLogo();
 
   @override
   Widget build(BuildContext context) {

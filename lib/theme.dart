@@ -1,4 +1,4 @@
-// lib/theme.dart  — Braška stark monochrome
+// lib/theme.dart  — Strawberry Manager stark monochrome
 import 'package:flutter/material.dart';
 
 class Bk {
@@ -95,8 +95,8 @@ class GlowGlassCard extends GlassCard {
 
 // ── Monochrome nav bar ────────────────────────────────────────────────────
 
-class BraskaNavBar extends StatelessWidget {
-  const BraskaNavBar({
+class StrawberryNavBar extends StatelessWidget {
+  const StrawberryNavBar({
     super.key,
     required this.selectedIndex,
     required this.onTap,

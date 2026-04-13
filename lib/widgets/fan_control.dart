@@ -1,4 +1,4 @@
-// lib/widgets/fan_control.dart — Braška fan threshold
+// lib/widgets/fan_control.dart — Strawberry Manager fan threshold
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../theme.dart';

@@ -1,11 +1,11 @@
 {
-    "name": "ps4_mon",
-    "short_name": "ps4_mon",
+    "name": "Strawberry Manager",
+    "short_name": "Strawberry",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Remote control client for Strawberry Kernel Manager.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

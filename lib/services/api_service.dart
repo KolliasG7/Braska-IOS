@@ -107,8 +107,13 @@ class ApiService {
       _u('/api/system/processes?limit=$limit&sort_by=$sortBy'), headers: _h,
     ).timeout(const Duration(seconds: 8));
     _chk(r);
-    return (jsonDecode(r.body)['processes'] as List)
-        .map((e) => ProcessInfo.fromJson(e)).toList();
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final processes = body['processes'];
+    if (processes is! List) return const [];
+    return processes
+        .whereType<Map>()
+        .map((e) => ProcessInfo.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   Future<void> killProcess(int pid, {String signal = 'SIGTERM'}) async {
