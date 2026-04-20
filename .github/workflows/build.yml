@@ -36,6 +36,6 @@ jobs:
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Braska-IPA
-          path: Braska.ipa
+          name: Strawberry-Manager-IPA
+          path: Strawberry-Manager.ipa
           retention-days: 30
