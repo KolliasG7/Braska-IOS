@@ -24,6 +24,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   File? _selectedFile;
   bool  _sending = false;
   final _payloadSender = const PayloadSenderService();
+  bool _showPayloadSection = true;
+  bool _showHistorySection = true;
 
   @override
   void initState() {
@@ -171,112 +173,174 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // ── Payload injection ──────────────────────────────────────
-          _SectionHeader('PAYLOAD INJECTION'),
-          const SizedBox(height: 10),
-
-          Row(children: [
-            Expanded(
-              flex: 3,
-              child: _InputField(
-                controller: _ipCtrl,
-                hint: 'Target IP',
-                keyboard: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                ],
+          _SectionHeader(
+            'PAYLOAD INJECTION',
+            trailing: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _showPayloadSection = !_showPayloadSection);
+              },
+              child: Text(
+                _showPayloadSection ? 'HIDE' : 'SHOW',
+                style: const TextStyle(
+                  color: Bk.textDim,
+                  fontSize: 9,
+                  letterSpacing: 1.5,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 1,
-              child: _InputField(
-                controller: _portCtrl,
-                hint: 'Port',
-                keyboard: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              ),
-            ),
-          ]),
-
-          const SizedBox(height: 8),
-
-          GestureDetector(
-            onTap: _pickFile,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: Bk.surface1,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Bk.border),
-              ),
-              child: Row(children: [
-                const Icon(Icons.attach_file_outlined,
-                  color: Bk.textDim, size: 16),
-                const SizedBox(width: 10),
-                Expanded(child: Text(
-                  _selectedFile != null
-                    ? _selectedFile!.path.split(Platform.pathSeparator).last
-                    : 'Select payload file…',
-                  style: TextStyle(
-                    color: _selectedFile != null ? Bk.textPri : Bk.textDim,
-                    fontSize: 13),
-                  overflow: TextOverflow.ellipsis,
-                )),
-                const Icon(Icons.chevron_right, color: Bk.textDim, size: 16),
-              ]),
             ),
           ),
-
           const SizedBox(height: 10),
-
-          GestureDetector(
-            onTap: _sending ? null : _sendPayload,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: _sending ? Bk.surface2 : Bk.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              alignment: Alignment.center,
-              child: _sending
-                ? const SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(
-                      color: Bk.oled, strokeWidth: 2))
-                : const Text('SEND PAYLOAD',
-                    style: TextStyle(
-                      color: Bk.oled, fontSize: 12,
-                      fontWeight: FontWeight.w900, letterSpacing: 2)),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _showPayloadSection
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: Column(
+              children: [
+                Row(children: [
+                  Expanded(
+                    flex: 3,
+                    child: _InputField(
+                      controller: _ipCtrl,
+                      hint: 'Target IP',
+                      keyboard: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 1,
+                    child: _InputField(
+                      controller: _portCtrl,
+                      hint: 'Port',
+                      keyboard: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _pickFile,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Bk.surface1,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Bk.border),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.attach_file_outlined, color: Bk.textDim, size: 16),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _selectedFile != null
+                              ? _selectedFile!.path.split(Platform.pathSeparator).last
+                              : 'Select payload file…',
+                          style: TextStyle(
+                            color: _selectedFile != null ? Bk.textPri : Bk.textDim,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Bk.textDim, size: 16),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: _sending ? null : _sendPayload,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: _sending ? Bk.surface2 : Bk.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: _sending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(color: Bk.oled, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'SEND PAYLOAD',
+                            style: TextStyle(
+                              color: Bk.oled,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
+            secondChild: const SizedBox.shrink(),
           ),
 
           // ── History ────────────────────────────────────────────────
           if (_history.isNotEmpty) ...[
             const SizedBox(height: 24),
-            Row(children: [
-              _SectionHeader('HISTORY'),
-              const Spacer(),
-              GestureDetector(
-                onTap: () async {
-                  await PayloadHistoryService.clear();
-                  _loadPayloadHistory();
-                },
-                child: const Text('CLEAR',
-                  style: TextStyle(
-                    color: Bk.textDim, fontSize: 9, letterSpacing: 1.5)),
+            _SectionHeader(
+              'HISTORY',
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _showHistorySection = !_showHistorySection);
+                    },
+                    child: Text(
+                      _showHistorySection ? 'HIDE' : 'SHOW',
+                      style: const TextStyle(
+                        color: Bk.textDim,
+                        fontSize: 9,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () async {
+                      await PayloadHistoryService.clear();
+                      _loadPayloadHistory();
+                    },
+                    child: const Text(
+                      'CLEAR',
+                      style: TextStyle(color: Bk.textDim, fontSize: 9, letterSpacing: 1.5),
+                    ),
+                  ),
+                ],
               ),
-            ]),
+            ),
             const SizedBox(height: 8),
-            ...(_history.map((r) => _HistoryTile(
-              record: r,
-              onTap: () {
-                _ipCtrl.text   = r.ip;
-                _portCtrl.text = r.port.toString();
-                setState(() =>
-                  _selectedFile = File(r.filePath).existsSync()
-                    ? File(r.filePath) : null);
-              },
-            ))),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 220),
+              crossFadeState: _showHistorySection
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              firstChild: Column(
+                children: [
+                  ...(_history.map((r) => _HistoryTile(
+                        record: r,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          _ipCtrl.text = r.ip;
+                          _portCtrl.text = r.port.toString();
+                          setState(() => _selectedFile =
+                              File(r.filePath).existsSync() ? File(r.filePath) : null);
+                        },
+                      ))),
+                ],
+              ),
+              secondChild: const SizedBox.shrink(),
+            ),
           ],
 
           const SizedBox(height: 24),
@@ -324,14 +388,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
+  const _SectionHeader(this.label, {this.trailing});
   final String label;
-  @override Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Text(label, style: const TextStyle(
-      color: Bk.textDim, fontSize: 9,
-      fontWeight: FontWeight.w700, letterSpacing: 2)),
-  );
+  final Widget? trailing;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: Bk.textDim,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+              ),
+            ),
+            const Spacer(),
+            if (trailing != null) trailing!,
+          ],
+        ),
+      );
 }
 
 class _ToggleTile extends StatelessWidget {

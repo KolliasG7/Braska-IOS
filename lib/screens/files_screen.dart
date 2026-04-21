@@ -1,6 +1,7 @@
 // lib/screens/files_screen.dart — File browser, upload, download
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/api_service.dart';
@@ -38,12 +39,14 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   void _navigate(String path) {
+    HapticFeedback.selectionClick();
     _history.add(path);
     _load(path);
   }
 
   void _goBack() {
     if (_history.length > 1) {
+      HapticFeedback.selectionClick();
       _history.removeLast();
       _load(_history.last);
     }
@@ -182,31 +185,93 @@ class _FilesScreenState extends State<FilesScreen> {
             onPressed: () => _load(_path)),
         ],
       ),
-      body: _loading
-        ? const Center(child: CircularProgressIndicator(color: Bk.white, strokeWidth: 2))
-        : _err != null
-          ? Center(child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(_err!, style: const TextStyle(color: Bk.textSec, fontSize: 12))))
-          : _items.isEmpty
-            ? const Center(child: Text('Empty directory',
-                style: TextStyle(color: Bk.textDim, fontSize: 13)))
-            : ListView.separated(
-                itemCount: _items.length,
-                separatorBuilder: (_, __) => const Divider(color: Bk.border, height: 1),
-                itemBuilder: (_, i) => _FileRow(
-                  item:       _items[i],
-                  onTap:      () {
-                    if (_items[i]['is_dir'] == true) {
-                      _navigate(_items[i]['path'] as String);
-                    }
-                  },
-                  onDownload: _items[i]['is_dir'] != true
-                    ? () => _download(_items[i]) : null,
-                  onDelete:   () => _delete(_items[i]),
-                  fmtSize:    _fmtSize,
-                ),
-              ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: _loading
+            ? const _FileSkeleton(key: ValueKey('loading'))
+            : _err != null
+                ? Center(
+                    key: const ValueKey('error'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        _err!,
+                        style: const TextStyle(color: Bk.textSec, fontSize: 12),
+                      ),
+                    ),
+                  )
+                : _items.isEmpty
+                    ? const Center(
+                        key: ValueKey('empty'),
+                        child: Text(
+                          'Empty directory',
+                          style: TextStyle(color: Bk.textDim, fontSize: 13),
+                        ),
+                      )
+                    : ListView.separated(
+                        key: const ValueKey('list'),
+                        itemCount: _items.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(color: Bk.border, height: 1),
+                        itemBuilder: (_, i) => _FileRow(
+                          item: _items[i],
+                          onTap: () {
+                            if (_items[i]['is_dir'] == true) {
+                              _navigate(_items[i]['path'] as String);
+                            }
+                          },
+                          onDownload: _items[i]['is_dir'] != true
+                              ? () => _download(_items[i])
+                              : null,
+                          onDelete: () => _delete(_items[i]),
+                          fmtSize: _fmtSize,
+                        ),
+                      ),
+      ),
+    );
+  }
+}
+
+class _FileSkeleton extends StatelessWidget {
+  const _FileSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: 10,
+      itemBuilder: (_, __) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            _SkelBox(width: 16, height: 16),
+            SizedBox(width: 12),
+            Expanded(child: _SkelBox(width: double.infinity, height: 12)),
+            SizedBox(width: 10),
+            _SkelBox(width: 18, height: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkelBox extends StatelessWidget {
+  const _SkelBox({required this.width, required this.height});
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Bk.surface1,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Bk.border),
+      ),
     );
   }
 }

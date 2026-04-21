@@ -1,5 +1,6 @@
 // lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/connection_provider.dart';
 import '../models/telemetry.dart';
@@ -22,6 +23,17 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
 
+  Widget _buildTabContent(TelemetryFrame? frame, ConnectionProvider cp) {
+    return switch (_tab) {
+      0 => _OverviewTab(frame: frame),
+      1 => _ControlTab(frame: frame, api: cp.api),
+      2 => ProcessesScreen(api: cp.api!),
+      3 => const TerminalScreen(),
+      4 => FilesScreen(api: cp.api!),
+      _ => PowerScreen(api: cp.api!),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final cp    = context.watch<ConnectionProvider>();
@@ -38,19 +50,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
             frame: frame, ws: cp.ws,
             onSettings: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const SettingsScreen()))),
-          Expanded(child: IndexedStack(index: _tab, children: [
-            _OverviewTab(frame: frame),
-            _ControlTab(frame: frame, api: cp.api),
-            ProcessesScreen(api: cp.api!),
-            const TerminalScreen(),
-            FilesScreen(api: cp.api!),
-            PowerScreen(api: cp.api!),
-          ])),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.03, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<int>(_tab),
+                child: _buildTabContent(frame, cp),
+              ),
+            ),
+          ),
         ]),
       ),
       bottomNavigationBar: _Nav(
         selected:    _tab,
-        onTap:       (i) => setState(() => _tab = i),
+        onTap:       (i) {
+          if (i == _tab) return;
+          HapticFeedback.selectionClick();
+          setState(() => _tab = i);
+        },
         hasCpuAlert: cpu > 80,
       ),
     );
@@ -97,6 +128,7 @@ class _Nav extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 6),
                   decoration: sel ? BoxDecoration(
@@ -108,13 +140,29 @@ class _Nav extends StatelessWidget {
                       isLabelVisible: tab.badge && hasCpuAlert,
                       backgroundColor: Bk.white,
                       smallSize: 6,
-                      child: Icon(tab.icon, color: col,
-                        size: sel ? 19 : 17)),
+                      child: AnimatedScale(
+                        scale: sel ? 1.08 : 1,
+                        duration: const Duration(milliseconds: 170),
+                        curve: Curves.easeOutBack,
+                        child: Icon(
+                          tab.icon,
+                          color: col,
+                          size: sel ? 19 : 17,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 3),
-                    Text(tab.label, style: TextStyle(
-                      color: col, fontSize: 7,
-                      fontWeight: sel ? FontWeight.w900 : FontWeight.w500,
-                      letterSpacing: 1)),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      style: TextStyle(
+                        color: col,
+                        fontSize: 7,
+                        fontWeight: sel ? FontWeight.w900 : FontWeight.w500,
+                        letterSpacing: 1,
+                      ),
+                      child: Text(tab.label),
+                    ),
                   ]),
                 ),
               );
@@ -153,14 +201,15 @@ class _TopBar extends StatelessWidget {
         ]),
         const Spacer(),
         if (frame != null) ...[
-          _Chip(Icons.thermostat_outlined,
+          _Chip(
+            Icons.thermostat_outlined,
             '${temp.toStringAsFixed(0)}°',
-            temp >= 88 ? Bk.white : Bk.textSec),
+            temp >= 88 ? Bk.white : Bk.textSec,
+          ),
           const SizedBox(width: 6),
           _Chip(Icons.memory_outlined, '${cpu.toStringAsFixed(0)}%', Bk.textSec),
           const SizedBox(width: 6),
-          _Chip(Icons.air_outlined,
-            rpm == 0 ? 'idle' : '$rpm', Bk.textSec),
+          _Chip(Icons.air_outlined, rpm == 0 ? 'idle' : '$rpm', Bk.textSec),
           const SizedBox(width: 12),
         ],
         StreamBuilder<WsState>(
@@ -188,8 +237,20 @@ class _Chip extends StatelessWidget {
     Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, color: color.withOpacity(0.7), size: 11),
       const SizedBox(width: 3),
-      Text(val, style: TextStyle(
-        color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+      AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        transitionBuilder: (child, anim) =>
+          FadeTransition(opacity: anim, child: child),
+        child: Text(
+          val,
+          key: ValueKey<String>(val),
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
     ]);
 }
 
