@@ -1,6 +1,13 @@
 // lib/screens/settings_screen.dart - KEY FIX FOR PAYLOAD INJECTION
-
-// In the _injectPayload method, replace lines 174-176:
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/connection_provider.dart';
+import '../services/payload_history_service.dart';
+import '../theme.dart';
 
   Future<void> _injectPayload(String ip, int port, File file) async {
     if (!mounted) return;
