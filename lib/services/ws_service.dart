@@ -34,6 +34,11 @@ class WsService {
 
   void connect() {
     if (_disposed) return;
+    // Close any prior channel/subscription before starting a fresh attempt,
+    // otherwise repeated connect() calls (e.g. the manual Retry button, or
+    // state transitions during a reconnect) can leak a WebSocket and a
+    // stream subscription that both keep firing in the background.
+    disconnect();
     _retryS = 2;
     _tryConnect();
   }

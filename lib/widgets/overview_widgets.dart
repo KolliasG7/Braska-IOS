@@ -528,7 +528,7 @@ class UptimeChip extends StatelessWidget {
   const UptimeChip({super.key, required this.uptime});
   final String uptime;
   @override Widget build(BuildContext context) => GlassCard(
-    subtle: true,
+    style: GlassStyle.subtle,
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
       const Icon(Icons.timer_outlined, color: Bk.textDim, size: 14),

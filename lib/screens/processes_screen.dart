@@ -1,4 +1,4 @@
-// lib/screens/processes_screen.dart
+// lib/screens/processes_screen.dart — process drilldown from Monitor tab
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,7 +14,8 @@ class ProcessesScreen extends StatefulWidget {
   @override State<ProcessesScreen> createState() => _ProcessesScreenState();
 }
 
-class _ProcessesScreenState extends State<ProcessesScreen> with WidgetsBindingObserver {
+class _ProcessesScreenState extends State<ProcessesScreen>
+    with WidgetsBindingObserver {
   List<ProcessInfo> _procs = [];
   String _sort = 'cpu';
   bool _loading = true;
@@ -23,6 +24,11 @@ class _ProcessesScreenState extends State<ProcessesScreen> with WidgetsBindingOb
   String _filter = '';
   DateTime? _lastUpdated;
   DateTime? _lastSuccess;
+  // Prevents overlapping `_refresh` calls when the server is slow: the
+  // 3 s poller or a pull-to-refresh can otherwise fire a second request
+  // before the first one returns, producing out-of-order state updates
+  // and doubling the bandwidth cost on flaky links.
+  bool _inFlight = false;
 
   @override
   void initState() {
@@ -61,6 +67,8 @@ class _ProcessesScreenState extends State<ProcessesScreen> with WidgetsBindingOb
   }
 
   Future<void> _refresh() async {
+    if (_inFlight) return;
+    _inFlight = true;
     try {
       final p = await widget.api.getProcesses(limit: 60, sortBy: _sort);
       if (!mounted) return;
@@ -78,6 +86,8 @@ class _ProcessesScreenState extends State<ProcessesScreen> with WidgetsBindingOb
         _loading = false;
         _lastUpdated = DateTime.now();
       });
+    } finally {
+      _inFlight = false;
     }
   }
 
@@ -97,8 +107,10 @@ class _ProcessesScreenState extends State<ProcessesScreen> with WidgetsBindingOb
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error: $e', style: const TextStyle(color: Colors.white)),
-        backgroundColor: Bk.red,
+        content: Text('Error: $e',
+          style: const TextStyle(color: Bk.textPri)),
+        backgroundColor: Bk.danger.withOpacity(0.9),
+        behavior: SnackBarBehavior.floating,
       ));
     }
   }
@@ -106,35 +118,33 @@ class _ProcessesScreenState extends State<ProcessesScreen> with WidgetsBindingOb
   void _showActions(ProcessInfo p) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Bk.surface1,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => GlassSheet(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text('PID ${p.pid}  ·  ${p.name}',
-            style: const TextStyle(color: Bk.textPri, fontSize: 14,
+            style: const TextStyle(color: Bk.textPri, fontSize: 15,
               fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(p.cmdline,
-            style: const TextStyle(color: Bk.textDim, fontSize: 10),
+            style: const TextStyle(color: Bk.textDim, fontSize: 11),
             maxLines: 2, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl),
           Row(children: [
-            Expanded(child: _ActionBtn('SIGTERM', Bk.amber,
+            Expanded(child: _SigBtn('SIGTERM', Bk.warn,
               () { Navigator.pop(context); _kill(p, 'SIGTERM'); })),
-            const SizedBox(width: 10),
-            Expanded(child: _ActionBtn('SIGKILL', Bk.red,
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: _SigBtn('SIGKILL', Bk.danger,
               () { Navigator.pop(context); _kill(p, 'SIGKILL'); })),
-            const SizedBox(width: 10),
-            Expanded(child: _ActionBtn('SIGSTOP', Bk.textSec,
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: _SigBtn('SIGSTOP', Bk.textSec,
               () { Navigator.pop(context); _kill(p, 'SIGSTOP'); })),
           ]),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL',
-              style: TextStyle(color: Bk.textDim, letterSpacing: 2, fontSize: 11))),
+            child: const Text('Cancel',
+              style: TextStyle(color: Bk.textDim, fontSize: 13))),
         ]),
       ),
     );
@@ -146,187 +156,181 @@ class _ProcessesScreenState extends State<ProcessesScreen> with WidgetsBindingOb
     final procs = _filtered;
     final stale = _lastSuccess != null &&
         DateTime.now().difference(_lastSuccess!).inSeconds > 15;
-    return Scaffold(
-      backgroundColor: Bk.oled,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Row(children: [
-          const Text('PROCESSES'),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Bk.cyanGlow,
-              borderRadius: BorderRadius.circular(10)),
-            child: Text('${procs.length}',
-              style: const TextStyle(color: Bk.cyan, fontSize: 10,
-                fontWeight: FontWeight.w800)),
-          ),
-        ]),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.sort_outlined, color: Bk.textSec),
-            color: Bk.surface1,
-            onSelected: (v) {
-              HapticFeedback.selectionClick();
-              setState(() => _sort = v);
-              _refresh();
-            },
-            itemBuilder: (_) => [
-              for (final s in ['cpu', 'mem', 'pid', 'name'])
-                PopupMenuItem(value: s, child: Text(s.toUpperCase(),
-                  style: TextStyle(
-                    color: _sort == s ? Bk.cyan : Bk.textSec,
-                    fontSize: 11, letterSpacing: 1.5))),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh_outlined, size: 18),
-            tooltip: 'Refresh processes',
-            onPressed: _refresh),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(20),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              _lastUpdated == null
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(children: [
+            _Header(
+              count: procs.length,
+              sort: _sort,
+              onSortChanged: (v) {
+                HapticFeedback.selectionClick();
+                setState(() => _sort = v);
+                _refresh();
+              },
+              onRefresh: _refresh,
+              updatedLabel: _lastUpdated == null
                   ? 'Never updated'
                   : stale
                       ? 'Stale (${DateTime.now().difference(_lastUpdated!).inSeconds}s ago)'
                       : 'Updated ${DateTime.now().difference(_lastUpdated!).inSeconds}s ago',
-              style: TextStyle(
-                color: stale ? Bk.amber : Bk.textDim,
-                fontSize: 10,
-                letterSpacing: 0.5,
+              updatedColor: stale ? Bk.warn : Bk.textDim,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.md),
+              child: TextField(
+                onChanged: (v) => setState(() => _filter = v),
+                style: const TextStyle(color: Bk.textPri, fontSize: 14),
+                cursorColor: Bk.accent,
+                decoration: glassInputDecoration(
+                  hintText: 'Filter by name, user, PID…',
+                  prefixIcon: Icons.search_outlined,
+                  dense: true,
+                ),
               ),
             ),
-          ),
-        ),
-      ),
-      body: Column(children: [
-        // Search
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: TextField(
-            onChanged: (v) => setState(() => _filter = v),
-            style: const TextStyle(color: Bk.textPri, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: 'Filter by name, user, PID…',
-              hintStyle: const TextStyle(color: Bk.textDim, fontSize: 12),
-              prefixIcon: const Icon(Icons.search_outlined,
-                color: Bk.textDim, size: 18),
-              filled: true, fillColor: Bk.surface1,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Bk.border)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Bk.border)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Bk.cyan, width: 1.5)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl + AppSpacing.xs),
+              child: Row(children: const [
+                SizedBox(width: 52, child: Text('PID', style: T.label)),
+                Expanded(flex: 3, child: Text('NAME', style: T.label)),
+                SizedBox(width: 52, child: Text('CPU%',
+                  style: T.label, textAlign: TextAlign.right)),
+                SizedBox(width: 58, child: Text('MEM',
+                  style: T.label, textAlign: TextAlign.right)),
+              ]),
             ),
-          ),
-        ),
-        // Headers
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(children: const [
-            SizedBox(width: 52, child: Text('PID',
-              style: TextStyle(color: Bk.textDim, fontSize: 9, letterSpacing: 1.5))),
-            Expanded(flex: 3, child: Text('NAME',
-              style: TextStyle(color: Bk.textDim, fontSize: 9, letterSpacing: 1.5))),
-            SizedBox(width: 52, child: Text('CPU%',
-              style: TextStyle(color: Bk.textDim, fontSize: 9, letterSpacing: 1.5),
-              textAlign: TextAlign.right)),
-            SizedBox(width: 58, child: Text('MEM',
-              style: TextStyle(color: Bk.textDim, fontSize: 9, letterSpacing: 1.5),
-              textAlign: TextAlign.right)),
+            const SizedBox(height: AppSpacing.xs),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _refresh,
+                color: Bk.accent,
+                backgroundColor: Bk.surface1,
+                child: AnimatedSwitcher(
+                  duration: Duration(milliseconds: reduceMotion ? 1 : 220),
+                  switchInCurve: AppCurves.enter,
+                  switchOutCurve: AppCurves.exit,
+                  child: _loading
+                      ? const _ProcSkeleton(key: ValueKey('loading'))
+                      : _err != null
+                          ? Center(
+                              key: const ValueKey('error'),
+                              child: Padding(
+                                padding: const EdgeInsets.all(AppSpacing.xl),
+                                child: Text(
+                                  _err!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Bk.danger, fontSize: 12),
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              key: const ValueKey('list'),
+                              padding: const EdgeInsets.fromLTRB(
+                                  AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl),
+                              itemCount: procs.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 4),
+                              itemBuilder: (_, i) => _ProcRow(
+                                p: procs[i],
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  _showActions(procs[i]);
+                                },
+                              ),
+                            ),
+                ),
+              ),
+            ),
           ]),
         ),
-        const Divider(color: Bk.border, height: 1),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _refresh,
-            color: Bk.white,
-            backgroundColor: Bk.surface1,
-            child: AnimatedSwitcher(
-            duration: Duration(milliseconds: reduceMotion ? 1 : 220),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child: _loading
-                ? const _ProcSkeleton(key: ValueKey('loading'))
-                : _err != null
-                    ? Center(
-                        key: const ValueKey('error'),
-                        child: Text(
-                          _err!,
-                          style: const TextStyle(color: Bk.red, fontSize: 12),
-                        ),
-                      )
-                    : ListView.separated(
-                        key: const ValueKey('list'),
-                        itemCount: procs.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(color: Bk.border, height: 1),
-                        itemBuilder: (_, i) => _ProcRow(
-                          p: procs[i],
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            _showActions(procs[i]);
-                          },
-                        ),
-                      ),
-            ),
-          ),
-        ),
-      ]),
+      ),
     );
   }
 }
 
-class _ProcSkeleton extends StatelessWidget {
-  const _ProcSkeleton({super.key});
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.count,
+    required this.sort,
+    required this.onSortChanged,
+    required this.onRefresh,
+    required this.updatedLabel,
+    required this.updatedColor,
+  });
+  final int count;
+  final String sort;
+  final ValueChanged<String> onSortChanged;
+  final VoidCallback onRefresh;
+  final String updatedLabel;
+  final Color updatedColor;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: 10,
-      itemBuilder: (_, __) => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
+      child: Row(children: [
+        GlassIconButton(
+          icon: Icons.arrow_back_ios_new,
+          onPressed: () => Navigator.of(context).maybePop(),
+          size: 38,
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SkelBox(width: 48, height: 10),
-            SizedBox(width: 10),
-            Expanded(child: _SkelBox(width: double.infinity, height: 12)),
-            SizedBox(width: 10),
-            _SkelBox(width: 40, height: 10),
-            SizedBox(width: 10),
-            _SkelBox(width: 50, height: 10),
+            Row(children: [
+              const Text('Processes',
+                style: TextStyle(
+                  color: Bk.textPri, fontSize: 22,
+                  fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Bk.accent.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                  border: Border.all(color: Bk.accent.withOpacity(0.4)),
+                ),
+                child: Text('$count',
+                  style: const TextStyle(
+                    color: Bk.accent, fontSize: 11,
+                    fontWeight: FontWeight.w800)),
+              ),
+            ]),
+            const SizedBox(height: 2),
+            Text(updatedLabel,
+              style: TextStyle(
+                color: updatedColor, fontSize: 11, letterSpacing: 0.2)),
+          ],
+        )),
+        const SizedBox(width: AppSpacing.sm),
+        PopupMenuButton<String>(
+          tooltip: 'Sort',
+          color: Bk.surface1,
+          icon: const Icon(Icons.sort_outlined, color: Bk.textSec),
+          onSelected: onSortChanged,
+          itemBuilder: (_) => [
+            for (final s in ['cpu', 'mem', 'pid', 'name'])
+              PopupMenuItem(value: s, child: Text(s.toUpperCase(),
+                style: TextStyle(
+                  color: sort == s ? Bk.accent : Bk.textSec,
+                  fontSize: 12, letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700))),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SkelBox extends StatelessWidget {
-  const _SkelBox({required this.width, required this.height});
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Bk.surface1,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Bk.border),
-      ),
+        IconButton(
+          icon: const Icon(Icons.refresh_outlined,
+            color: Bk.textSec, size: 20),
+          onPressed: onRefresh,
+        ),
+      ]),
     );
   }
 }
@@ -337,63 +341,114 @@ class _ProcRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+  Widget build(BuildContext context) {
+    return GlassCard(
+      onTap: onTap,
+      style: GlassStyle.subtle,
+      radius: AppRadii.md,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: 10),
       child: Row(children: [
         SizedBox(width: 52,
           child: Text('${p.pid}',
-            style: const TextStyle(color: Bk.textDim, fontSize: 11,
+            style: const TextStyle(color: Bk.textDim, fontSize: 12,
               fontFamily: 'monospace'))),
         Expanded(flex: 3, child: Column(
           crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(p.name,
-              style: const TextStyle(color: Bk.textPri, fontSize: 12,
+              style: const TextStyle(color: Bk.textPri, fontSize: 13,
                 fontWeight: FontWeight.w700),
               maxLines: 1, overflow: TextOverflow.ellipsis),
             if (p.user.isNotEmpty)
               Text(p.user,
-                style: const TextStyle(color: Bk.textDim, fontSize: 9)),
+                style: const TextStyle(color: Bk.textDim, fontSize: 10)),
           ])),
         SizedBox(width: 52,
           child: Text(
             p.cpuPct > 0 ? '${p.cpuPct.toStringAsFixed(1)}%' : '—',
             style: TextStyle(
-              color: p.cpuPct > 50 ? Bk.amber
-                   : p.cpuPct > 20 ? Bk.cyan : Bk.textSec,
-              fontSize: 11, fontWeight: FontWeight.w700,
+              color: p.cpuPct > 50 ? Bk.warn
+                   : p.cpuPct > 20 ? Bk.accent : Bk.textSec,
+              fontSize: 12, fontWeight: FontWeight.w700,
               fontFamily: 'monospace'),
             textAlign: TextAlign.right)),
         SizedBox(width: 58,
           child: Text(
             '${p.memRssMb.toStringAsFixed(1)}M',
             style: TextStyle(
-              color: p.memRssMb > 500 ? Bk.amber : Bk.textSec,
-              fontSize: 11, fontFamily: 'monospace'),
+              color: p.memRssMb > 500 ? Bk.warn : Bk.textSec,
+              fontSize: 12, fontFamily: 'monospace'),
             textAlign: TextAlign.right)),
       ]),
-    ),
-  );
+    );
+  }
 }
 
-class _ActionBtn extends StatelessWidget {
-  const _ActionBtn(this.label, this.color, this.onTap);
-  final String label; final Color color; final VoidCallback onTap;
+class _SigBtn extends StatelessWidget {
+  const _SigBtn(this.label, this.color, this.onTap);
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => ElevatedButton(
     onPressed: onTap,
     style: ElevatedButton.styleFrom(
-      backgroundColor: color.withOpacity(0.12),
+      backgroundColor: color.withOpacity(0.14),
       foregroundColor: color,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: color.withOpacity(0.35))),
-      padding: const EdgeInsets.symmetric(vertical: 12),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        side: BorderSide(color: color.withOpacity(0.38))),
+      padding: const EdgeInsets.symmetric(vertical: 14),
     ),
     child: Text(label,
-      style: const TextStyle(fontSize: 10, letterSpacing: 1.5,
+      style: const TextStyle(fontSize: 11, letterSpacing: 1.5,
         fontWeight: FontWeight.w800)),
+  );
+}
+
+class _ProcSkeleton extends StatelessWidget {
+  const _ProcSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl),
+      itemCount: 10,
+      separatorBuilder: (_, __) => const SizedBox(height: 4),
+      itemBuilder: (_, __) => const GlassCard(
+        style: GlassStyle.subtle,
+        radius: AppRadii.md,
+        padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: 14),
+        child: Row(children: [
+          _Skel(width: 48, height: 10),
+          SizedBox(width: 10),
+          Expanded(child: _Skel(width: double.infinity, height: 12)),
+          SizedBox(width: 10),
+          _Skel(width: 40, height: 10),
+          SizedBox(width: 10),
+          _Skel(width: 50, height: 10),
+        ]),
+      ),
+    );
+  }
+}
+
+class _Skel extends StatelessWidget {
+  const _Skel({required this.width, required this.height});
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: width,
+    height: height,
+    decoration: BoxDecoration(
+      color: Bk.glassSubtle,
+      borderRadius: BorderRadius.circular(6),
+    ),
   );
 }

@@ -1,0 +1,111 @@
+name: Build iOS IPA (Testing Branch)
+
+on:
+  push:
+    branches: [chore/hardening-telemetry-errors]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual trigger'
+        required: true
+        default: 'Manual build - Testing'
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Debug - List files
+        run: |
+          echo "📁 Current directory contents:"
+          ls -la
+          echo "📁 Assets directory:"
+          ls -la assets/ || echo "Assets directory not found"
+          echo "📄 pubspec.yaml contents:"
+          cat pubspec.yaml || echo "pubspec.yaml not found"
+          echo "📄 Checking pubspec.yaml syntax:"
+          flutter pub get --dry-run || echo "pubspec.yaml syntax check failed"
+        
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: 'stable'
+          cache: true
+          
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing Flutter dependencies..."
+          flutter pub get
+          if [ $? -ne 0 ]; then
+            echo "❌ ERROR: flutter pub get failed"
+            exit 1
+          else
+            echo "✅ Dependencies installed successfully"
+        
+      - name: Check for logo file
+        run: |
+          echo "🔍 Checking for logo file..."
+          if [ ! -f "assets/logo.png" ]; then
+            echo "❌ ERROR: logo.png not found in assets/"
+            exit 1
+          else
+            echo "✅ logo.png found"
+            ls -la assets/logo.png
+            
+      - name: Generate iOS Icons
+        run: |
+          echo "🔨 Generating iOS app icons from custom logo..."
+          flutter pub run flutter_launcher_icons:main
+          if [ $? -ne 0 ]; then
+            echo "❌ ERROR: Failed to generate iOS icons"
+            exit 1
+          else
+            echo "✅ iOS icons generated successfully"
+            
+      - name: Build iOS (no code signing)
+        run: |
+          echo "🏗 Building iOS app..."
+          flutter build ios --release --no-codesign
+          if [ $? -ne 0 ]; then
+            echo "❌ ERROR: Flutter build failed"
+            exit 1
+          else
+            echo "✅ Flutter build completed successfully"
+            
+      - name: Package into IPA
+        run: |
+          echo "📦 Packaging IPA..."
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          if [ $? -ne 0 ]; then
+            echo "❌ ERROR: Failed to copy Runner.app"
+            exit 1
+          else
+            echo "✅ Runner.app copied successfully"
+            
+          zip -r Strawberry-Manager-Testing.ipa Payload/
+          if [ $? -ne 0 ]; then
+            echo "❌ ERROR: Failed to create IPA"
+            exit 1
+          else
+            echo "✅ IPA created successfully"
+            
+          rm -rf Payload/
+          
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Strawberry-Manager-Testing-IPA
+          path: Strawberry-Manager-Testing.ipa
+          retention-days: 30
+          
+      - name: Build Summary
+        run: |
+          echo "🎉 Testing branch build completed successfully!"
+          echo "📱 App: Strawberry Manager"
+          echo "🔧 Flutter: 3.27.4"
+          echo "📦 Artifact: Strawberry-Manager-Testing.ipa"

@@ -19,6 +19,7 @@ dependencies:
   file_picker: ^10.3.10
   path_provider: ^2.1.4
   open_file: ^3.3.2
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.0
@@ -29,7 +30,7 @@ dev_dependencies:
 flutter_launcher_icons:
   ios: true
   android: false
-  image_path: "assets/logo.png"  
+  image_path: "assets/logo.png"
 
 flutter:
   uses-material-design: true
