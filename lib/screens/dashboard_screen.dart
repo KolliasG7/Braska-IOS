@@ -1,5 +1,6 @@
 // lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/connection_provider.dart';
 import '../models/telemetry.dart';
@@ -21,12 +22,26 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
+  int _prevTab = 0;
+
+  Widget _buildTabContent(TelemetryFrame? frame, ConnectionProvider cp) {
+    return switch (_tab) {
+      0 => _OverviewTab(frame: frame),
+      1 => _ControlTab(frame: frame, api: cp.api),
+      2 => ProcessesScreen(api: cp.api!),
+      3 => const TerminalScreen(),
+      4 => FilesScreen(api: cp.api!),
+      _ => PowerScreen(api: cp.api!),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final cp    = context.watch<ConnectionProvider>();
     final frame = cp.frame;
     final cpu   = frame?.cpu?.percent ?? 0;
+    final animMs = cp.reduceMotion ? 1 : 260;
+    final iconAnimMs = cp.reduceMotion ? 1 : 220;
 
     return Scaffold(
       backgroundColor: Bk.oled,
@@ -38,19 +53,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
             frame: frame, ws: cp.ws,
             onSettings: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const SettingsScreen()))),
-          Expanded(child: IndexedStack(index: _tab, children: [
-            _OverviewTab(frame: frame),
-            _ControlTab(frame: frame, api: cp.api),
-            ProcessesScreen(api: cp.api!),
-            const TerminalScreen(),
-            FilesScreen(api: cp.api!),
-            PowerScreen(api: cp.api!),
-          ])),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: Duration(milliseconds: animMs),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                final isForward = _tab >= _prevTab;
+                final beginX = isForward ? 0.05 : -0.05;
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: Offset(beginX, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<int>(_tab),
+                child: _buildTabContent(frame, cp),
+              ),
+            ),
+          ),
         ]),
       ),
       bottomNavigationBar: _Nav(
         selected:    _tab,
-        onTap:       (i) => setState(() => _tab = i),
+        reduceMotion: cp.reduceMotion,
+        onTap:       (i) {
+          if (i == _tab) return;
+          HapticFeedback.selectionClick();
+          setState(() {
+            _prevTab = _tab;
+            _tab = i;
+          });
+        },
         hasCpuAlert: cpu > 80,
       ),
     );
@@ -60,10 +100,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 // ── 6-tab nav ─────────────────────────────────────────────────────────────
 
 class _Nav extends StatelessWidget {
-  const _Nav({required this.selected, required this.onTap, required this.hasCpuAlert});
+  const _Nav({
+    required this.selected,
+    required this.onTap,
+    required this.hasCpuAlert,
+    required this.reduceMotion,
+  });
   final int selected;
   final void Function(int) onTap;
   final bool hasCpuAlert;
+  final bool reduceMotion;
 
   static const _tabs = [
     (icon: Icons.monitor_heart_outlined,  label: 'MONITOR', badge: false),
@@ -92,11 +138,13 @@ class _Nav extends StatelessWidget {
               final tab = _tabs[i];
               final sel = i == selected;
               final col = sel ? Bk.oled : Bk.textDim;
+              final iconAnimMs = reduceMotion ? 1 : 220;
               return GestureDetector(
                 onTap: () => onTap(i),
                 behavior: HitTestBehavior.opaque,
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration: Duration(milliseconds: reduceMotion ? 1 : 200),
+                  curve: Curves.easeOutCubic,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 6),
                   decoration: sel ? BoxDecoration(
@@ -104,21 +152,66 @@ class _Nav extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                   ) : null,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Badge(
-                      isLabelVisible: tab.badge && hasCpuAlert,
-                      backgroundColor: Bk.white,
-                      smallSize: 6,
-                      child: Icon(tab.icon, color: col,
-                        size: sel ? 19 : 17)),
+                    Builder(
+                      builder: (context) => Badge(
+                        isLabelVisible: tab.badge && hasCpuAlert,
+                        backgroundColor: Bk.white,
+                        smallSize: 6,
+                        child: AnimatedSwitcher(
+                          duration: Duration(milliseconds: iconAnimMs),
+                          switchInCurve: Curves.easeOutBack,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: ScaleTransition(
+                                scale: Tween<double>(begin: 0.86, end: 1).animate(animation),
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0, 0.12),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              ),
+                            );
+                          },
+                          child: TweenAnimationBuilder<double>(
+                            key: ValueKey('icon-$i-$sel'),
+                            duration: Duration(milliseconds: reduceMotion ? 1 : 190),
+                            curve: Curves.easeOutCubic,
+                            tween: Tween<double>(
+                              begin: sel ? 0.9 : 1.08,
+                              end: sel ? 1.08 : 1,
+                            ),
+                            builder: (_, scale, __) => Transform.scale(
+                              scale: scale,
+                              child: Icon(
+                                tab.icon,
+                                color: col,
+                                size: sel ? 19 : 17,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 3),
-                    Text(tab.label, style: TextStyle(
-                      color: col, fontSize: 7,
-                      fontWeight: sel ? FontWeight.w900 : FontWeight.w500,
-                      letterSpacing: 1)),
+                    AnimatedDefaultTextStyle(
+                      duration: Duration(milliseconds: reduceMotion ? 1 : 180),
+                      curve: Curves.easeOutCubic,
+                      style: TextStyle(
+                        color: col,
+                        fontSize: 7,
+                        fontWeight: sel ? FontWeight.w900 : FontWeight.w500,
+                        letterSpacing: 1,
+                      ),
+                      child: Text(tab.label),
+                    ),
                   ]),
                 ),
               );
-            }),
+            }).toList(),
           ),
         ),
       ),
@@ -153,14 +246,15 @@ class _TopBar extends StatelessWidget {
         ]),
         const Spacer(),
         if (frame != null) ...[
-          _Chip(Icons.thermostat_outlined,
+          _Chip(
+            Icons.thermostat_outlined,
             '${temp.toStringAsFixed(0)}°',
-            temp >= 88 ? Bk.white : Bk.textSec),
+            temp >= 88 ? Bk.white : Bk.textSec,
+          ),
           const SizedBox(width: 6),
           _Chip(Icons.memory_outlined, '${cpu.toStringAsFixed(0)}%', Bk.textSec),
           const SizedBox(width: 6),
-          _Chip(Icons.air_outlined,
-            rpm == 0 ? 'idle' : '$rpm', Bk.textSec),
+          _Chip(Icons.air_outlined, rpm == 0 ? 'idle' : '$rpm', Bk.textSec),
           const SizedBox(width: 12),
         ],
         StreamBuilder<WsState>(
@@ -174,8 +268,12 @@ class _TopBar extends StatelessWidget {
         const SizedBox(width: 12),
         GestureDetector(
           onTap: onSettings,
-          child: const Icon(Icons.settings_outlined,
-            color: Bk.textDim, size: 20)),
+          child: Semantics(
+            label: 'Open settings',
+            button: true,
+            child: Icon(Icons.settings_outlined, color: Bk.textDim, size: 20),
+          ),
+        ),
       ]),
     );
   }
@@ -188,8 +286,20 @@ class _Chip extends StatelessWidget {
     Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, color: color.withOpacity(0.7), size: 11),
       const SizedBox(width: 3),
-      Text(val, style: TextStyle(
-        color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+      AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        transitionBuilder: (child, anim) =>
+          FadeTransition(opacity: anim, child: child),
+        child: Text(
+          val,
+          key: ValueKey<String>(val),
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
     ]);
 }
 
@@ -228,32 +338,32 @@ class _OverviewTab extends StatelessWidget {
 
     final cp = context.watch<ConnectionProvider>();
 
-    final cards = <Widget>[
-      if (frame!.cpu != null)      CpuCard(cpu: frame!.cpu!, cpuHistory: cp.cpuHistory, showGraph: cp.showCpuGraph),
-      if (frame!.ram != null)      RamCard(ram: frame!.ram!, swap: frame!.swap, ramHistory: cp.ramHistory, showGraph: cp.showRamGraph),
-      if (frame!.fan != null)      ThermalCard(fan: frame!.fan!, tempHistory: cp.tempHistory, fanHistory: cp.fanHistory, showGraph: cp.showThermalGraph),
-      if (frame!.net.isNotEmpty)   NetworkCard(netList: frame!.net),
-      if (frame!.disk.isNotEmpty)  DiskCard(disks: frame!.disk),
-      IntrinsicHeight(child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: UptimeChip(uptime: frame!.uptimeFormatted)),
-          if (frame!.tunnel != null) ...[
-            const SizedBox(width: 12),
-            Expanded(child: _TunnelChip(t: frame!.tunnel!)),
-          ],
+    List<Widget> cards = [];
+    if (frame!.cpu != null) cards.add(CpuCard(cpu: frame!.cpu!, cpuHistory: cp.cpuHistory, showGraph: cp.showCpuGraph));
+    if (frame!.ram != null) cards.add(RamCard(ram: frame!.ram!, swap: frame!.swap, ramHistory: cp.ramHistory, showGraph: cp.showRamGraph));
+    if (frame!.fan != null) cards.add(ThermalCard(fan: frame!.fan!, tempHistory: cp.tempHistory, fanHistory: cp.fanHistory, showGraph: cp.showThermalGraph));
+    if (frame!.net.isNotEmpty) cards.add(NetworkCard(netList: frame!.net));
+    if (frame!.disk.isNotEmpty) cards.add(DiskCard(disks: frame!.disk));
+    cards.add(IntrinsicHeight(child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: UptimeChip(uptime: frame!.uptimeFormatted)),
+        if (frame!.tunnel != null) ...[
+          const SizedBox(width: 12),
+          Expanded(child: _TunnelChip(t: frame!.tunnel!)),
         ],
-      )),
-    ];
+      ],
+    )));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 120),
-      child: Column(children: [
-        for (int i = 0; i < cards.length; i++) ...[
-          _Anim(delay: Duration(milliseconds: 60 * i), child: cards[i]),
-          const SizedBox(height: 10),
-        ],
-      ]),
+      child: Column(
+        children: List.generate(cards.length * 2 - 1, (index) {
+          if (index.isOdd) return const SizedBox(height: 10);
+          final i = index ~/ 2;
+          return _Anim(delay: Duration(milliseconds: 60 * i), child: cards[i]);
+        }),
+      ),
     );
   }
 }
@@ -287,19 +397,19 @@ class _ControlTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (api == null) return const _Wait();
-    final cards = <Widget>[
-      if (frame?.fan != null)
-        FanControlCard(api: api, currentThreshold: frame!.fan!.thresholdC),
-      LedPanelCard(api: api),
-    ];
+    List<Widget> cards = [];
+    if (frame?.fan != null)
+      cards.add(FanControlCard(api: api, currentThreshold: frame!.fan!.thresholdC));
+    cards.add(LedPanelCard(api: api));
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 120),
-      child: Column(children: [
-        for (int i = 0; i < cards.length; i++) ...[
-          _Anim(delay: Duration(milliseconds: 60 * i), child: cards[i]),
-          const SizedBox(height: 10),
-        ],
-      ]),
+      child: Column(
+        children: List.generate(cards.length * 2 - 1, (index) {
+          if (index.isOdd) return const SizedBox(height: 10);
+          final i = index ~/ 2;
+          return _Anim(delay: Duration(milliseconds: 60 * i), child: cards[i]);
+        }),
+      ),
     );
   }
 }
@@ -338,3 +448,4 @@ class _AnimState extends State<_Anim> with SingleTickerProviderStateMixin {
   @override Widget build(BuildContext context) => FadeTransition(
     opacity: _fade, child: SlideTransition(position: _slide, child: widget.child));
 }
+

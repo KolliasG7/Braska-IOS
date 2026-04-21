@@ -1,9 +1,11 @@
 // lib/screens/files_screen.dart — File browser, upload, download
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../providers/connection_provider.dart';
 import '../theme.dart';
 
 class FilesScreen extends StatefulWidget {
@@ -18,6 +20,8 @@ class _FilesScreenState extends State<FilesScreen> {
   bool    _loading  = true;
   String? _err;
   List<String> _history = ['/'];
+  DateTime? _lastUpdated;
+  DateTime? _lastSuccess;
 
   @override void initState() { super.initState(); _load('/'); }
 
@@ -30,20 +34,28 @@ class _FilesScreenState extends State<FilesScreen> {
         _path    = data['path'] as String;
         _items   = List<Map<String, dynamic>>.from(data['items'] as List);
         _loading = false;
+        _lastUpdated = DateTime.now();
+        _lastSuccess = _lastUpdated;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _err = e.toString(); _loading = false; });
+      setState(() {
+        _err = e.toString();
+        _loading = false;
+        _lastUpdated = DateTime.now();
+      });
     }
   }
 
   void _navigate(String path) {
+    HapticFeedback.selectionClick();
     _history.add(path);
     _load(path);
   }
 
   void _goBack() {
     if (_history.length > 1) {
+      HapticFeedback.selectionClick();
       _history.removeLast();
       _load(_history.last);
     }
@@ -154,6 +166,9 @@ class _FilesScreenState extends State<FilesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = context.watch<ConnectionProvider>().reduceMotion;
+    final stale = _lastSuccess != null &&
+        DateTime.now().difference(_lastSuccess!).inSeconds > 30;
     return Scaffold(
       backgroundColor: Bk.oled,
       appBar: AppBar(
@@ -176,37 +191,123 @@ class _FilesScreenState extends State<FilesScreen> {
           IconButton(
             icon: const Icon(Icons.upload_outlined, size: 20),
             onPressed: _upload,
-            tooltip: 'Upload to here'),
+            tooltip: 'Upload to current folder'),
           IconButton(
             icon: const Icon(Icons.refresh_outlined, size: 18),
+            tooltip: 'Refresh files',
             onPressed: () => _load(_path)),
         ],
-      ),
-      body: _loading
-        ? const Center(child: CircularProgressIndicator(color: Bk.white, strokeWidth: 2))
-        : _err != null
-          ? Center(child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(_err!, style: const TextStyle(color: Bk.textSec, fontSize: 12))))
-          : _items.isEmpty
-            ? const Center(child: Text('Empty directory',
-                style: TextStyle(color: Bk.textDim, fontSize: 13)))
-            : ListView.separated(
-                itemCount: _items.length,
-                separatorBuilder: (_, __) => const Divider(color: Bk.border, height: 1),
-                itemBuilder: (_, i) => _FileRow(
-                  item:       _items[i],
-                  onTap:      () {
-                    if (_items[i]['is_dir'] == true) {
-                      _navigate(_items[i]['path'] as String);
-                    }
-                  },
-                  onDownload: _items[i]['is_dir'] != true
-                    ? () => _download(_items[i]) : null,
-                  onDelete:   () => _delete(_items[i]),
-                  fmtSize:    _fmtSize,
-                ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(20),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              _lastUpdated == null
+                  ? 'Never updated'
+                  : stale
+                      ? 'Stale (${DateTime.now().difference(_lastUpdated!).inSeconds}s ago)'
+                      : 'Updated ${DateTime.now().difference(_lastUpdated!).inSeconds}s ago',
+              style: TextStyle(
+                color: stale ? Bk.amber : Bk.textDim,
+                fontSize: 10,
+                letterSpacing: 0.5,
               ),
+            ),
+          ),
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () => _load(_path),
+        color: Bk.white,
+        backgroundColor: Bk.surface1,
+        child: AnimatedSwitcher(
+        duration: Duration(milliseconds: reduceMotion ? 1 : 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: _loading
+            ? const _FileSkeleton(key: ValueKey('loading'))
+            : _err != null
+                ? Center(
+                    key: const ValueKey('error'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        _err!,
+                        style: const TextStyle(color: Bk.textSec, fontSize: 12),
+                      ),
+                    ),
+                  )
+                : _items.isEmpty
+                    ? const Center(
+                        key: ValueKey('empty'),
+                        child: Text(
+                          'Empty directory',
+                          style: TextStyle(color: Bk.textDim, fontSize: 13),
+                        ),
+                      )
+                    : ListView.separated(
+                        key: const ValueKey('list'),
+                        itemCount: _items.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(color: Bk.border, height: 1),
+                        itemBuilder: (_, i) => _FileRow(
+                          item: _items[i],
+                          onTap: () {
+                            if (_items[i]['is_dir'] == true) {
+                              _navigate(_items[i]['path'] as String);
+                            }
+                          },
+                          onDownload: _items[i]['is_dir'] != true
+                              ? () => _download(_items[i])
+                              : null,
+                          onDelete: () => _delete(_items[i]),
+                          fmtSize: _fmtSize,
+                        ),
+                      ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FileSkeleton extends StatelessWidget {
+  const _FileSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: 10,
+      itemBuilder: (_, __) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            _SkelBox(width: 16, height: 16),
+            SizedBox(width: 12),
+            Expanded(child: _SkelBox(width: double.infinity, height: 12)),
+            SizedBox(width: 10),
+            _SkelBox(width: 18, height: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkelBox extends StatelessWidget {
+  const _SkelBox({required this.width, required this.height});
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Bk.surface1,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Bk.border),
+      ),
     );
   }
 }
@@ -268,6 +369,7 @@ class _FileRow extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.download_outlined, size: 18, color: Bk.textDim),
               onPressed: onDownload,
+              tooltip: 'Download file',
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints()),
           const SizedBox(width: 4),
@@ -275,6 +377,7 @@ class _FileRow extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.delete_outline, size: 17, color: Bk.textDim),
             onPressed: onDelete,
+            tooltip: 'Delete item',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints()),
         ]),

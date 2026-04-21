@@ -1,7 +1,10 @@
 // lib/screens/processes_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../models/process_info.dart';
+import '../providers/connection_provider.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
 
@@ -11,32 +14,70 @@ class ProcessesScreen extends StatefulWidget {
   @override State<ProcessesScreen> createState() => _ProcessesScreenState();
 }
 
-class _ProcessesScreenState extends State<ProcessesScreen> {
+class _ProcessesScreenState extends State<ProcessesScreen> with WidgetsBindingObserver {
   List<ProcessInfo> _procs = [];
   String _sort = 'cpu';
   bool _loading = true;
   String? _err;
   Timer? _timer;
   String _filter = '';
+  DateTime? _lastUpdated;
+  DateTime? _lastSuccess;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _refresh();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+    _startPolling();
   }
 
   @override
-  void dispose() { _timer?.cancel(); super.dispose(); }
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopPolling();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _timer ??= Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+  }
+
+  void _stopPolling() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startPolling();
+      _refresh();
+    } else if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _stopPolling();
+    }
+  }
 
   Future<void> _refresh() async {
     try {
       final p = await widget.api.getProcesses(limit: 60, sortBy: _sort);
       if (!mounted) return;
-      setState(() { _procs = p; _loading = false; _err = null; });
+      setState(() {
+        _procs = p;
+        _loading = false;
+        _err = null;
+        _lastUpdated = DateTime.now();
+        _lastSuccess = _lastUpdated;
+      });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _err = e.toString(); _loading = false; });
+      setState(() {
+        _err = e.toString();
+        _loading = false;
+        _lastUpdated = DateTime.now();
+      });
     }
   }
 
@@ -101,7 +142,10 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = context.watch<ConnectionProvider>().reduceMotion;
     final procs = _filtered;
+    final stale = _lastSuccess != null &&
+        DateTime.now().difference(_lastSuccess!).inSeconds > 15;
     return Scaffold(
       backgroundColor: Bk.oled,
       appBar: AppBar(
@@ -123,7 +167,11 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort_outlined, color: Bk.textSec),
             color: Bk.surface1,
-            onSelected: (v) { setState(() => _sort = v); _refresh(); },
+            onSelected: (v) {
+              HapticFeedback.selectionClick();
+              setState(() => _sort = v);
+              _refresh();
+            },
             itemBuilder: (_) => [
               for (final s in ['cpu', 'mem', 'pid', 'name'])
                 PopupMenuItem(value: s, child: Text(s.toUpperCase(),
@@ -134,8 +182,27 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh_outlined, size: 18),
+            tooltip: 'Refresh processes',
             onPressed: _refresh),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(20),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              _lastUpdated == null
+                  ? 'Never updated'
+                  : stale
+                      ? 'Stale (${DateTime.now().difference(_lastUpdated!).inSeconds}s ago)'
+                      : 'Updated ${DateTime.now().difference(_lastUpdated!).inSeconds}s ago',
+              style: TextStyle(
+                color: stale ? Bk.amber : Bk.textDim,
+                fontSize: 10,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
       ),
       body: Column(children: [
         // Search
@@ -180,22 +247,86 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
           ]),
         ),
         const Divider(color: Bk.border, height: 1),
-        Expanded(child: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: Bk.cyan, strokeWidth: 2))
-          : _err != null
-            ? Center(child: Text(_err!,
-                style: const TextStyle(color: Bk.red, fontSize: 12)))
-            : ListView.separated(
-                itemCount: procs.length,
-                separatorBuilder: (_, __) =>
-                  const Divider(color: Bk.border, height: 1),
-                itemBuilder: (_, i) => _ProcRow(
-                  p: procs[i],
-                  onTap: () => _showActions(procs[i])),
-              ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            color: Bk.white,
+            backgroundColor: Bk.surface1,
+            child: AnimatedSwitcher(
+            duration: Duration(milliseconds: reduceMotion ? 1 : 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: _loading
+                ? const _ProcSkeleton(key: ValueKey('loading'))
+                : _err != null
+                    ? Center(
+                        key: const ValueKey('error'),
+                        child: Text(
+                          _err!,
+                          style: const TextStyle(color: Bk.red, fontSize: 12),
+                        ),
+                      )
+                    : ListView.separated(
+                        key: const ValueKey('list'),
+                        itemCount: procs.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(color: Bk.border, height: 1),
+                        itemBuilder: (_, i) => _ProcRow(
+                          p: procs[i],
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            _showActions(procs[i]);
+                          },
+                        ),
+                      ),
+            ),
+          ),
         ),
       ]),
+    );
+  }
+}
+
+class _ProcSkeleton extends StatelessWidget {
+  const _ProcSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: 10,
+      itemBuilder: (_, __) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            _SkelBox(width: 48, height: 10),
+            SizedBox(width: 10),
+            Expanded(child: _SkelBox(width: double.infinity, height: 12)),
+            SizedBox(width: 10),
+            _SkelBox(width: 40, height: 10),
+            SizedBox(width: 10),
+            _SkelBox(width: 50, height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkelBox extends StatelessWidget {
+  const _SkelBox({required this.width, required this.height});
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Bk.surface1,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Bk.border),
+      ),
     );
   }
 }

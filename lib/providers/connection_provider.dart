@@ -6,6 +6,7 @@ import '../models/telemetry.dart';
 import '../services/api_service.dart';
 import '../services/ws_service.dart';
 import '../services/notification_service.dart';
+import '../services/error_formatter.dart';
 
 enum ConnState { idle, connecting, connected, error, needsAuth }
 
@@ -54,14 +55,17 @@ class ConnectionProvider extends ChangeNotifier {
   bool _showRamGraph      = true;
   bool _showThermalGraph  = true;
   bool _showNotifications = true;
+  bool _reduceMotion      = false;
   bool get showCpuGraph      => _showCpuGraph;
   bool get showRamGraph      => _showRamGraph;
   bool get showThermalGraph  => _showThermalGraph;
   bool get showNotifications => _showNotifications;
+  bool get reduceMotion      => _reduceMotion;
 
   void toggleCpuGraph(bool v)      { _showCpuGraph = v;      _save(); notifyListeners(); }
   void toggleRamGraph(bool v)      { _showRamGraph = v;      _save(); notifyListeners(); }
   void toggleThermalGraph(bool v)  { _showThermalGraph = v;  _save(); notifyListeners(); }
+  void toggleReduceMotion(bool v)  { _reduceMotion = v;      _save(); notifyListeners(); }
   void toggleNotifications(bool v) {
     _showNotifications = v; _save();
     if (!v) NotificationService.cancelStatus();
@@ -83,6 +87,7 @@ class ConnectionProvider extends ChangeNotifier {
       _showRamGraph      = p.getBool('show_ram_graph')       ?? true;
       _showThermalGraph  = p.getBool('show_thermal_graph')   ?? true;
       _showNotifications = p.getBool('show_notifications')   ?? true;
+      _reduceMotion      = p.getBool('reduce_motion')        ?? false;
       notifyListeners();
     } catch (e) {
       debugPrint('[ConnectionProvider] Error loading saved data: $e');
@@ -99,6 +104,7 @@ class ConnectionProvider extends ChangeNotifier {
       await p.setBool  ('show_ram_graph',      _showRamGraph);
       await p.setBool  ('show_thermal_graph',  _showThermalGraph);
       await p.setBool  ('show_notifications',  _showNotifications);
+      await p.setBool  ('reduce_motion',       _reduceMotion);
     } catch (e) {
       debugPrint('[ConnectionProvider] Error saving preferences: $e');
     }
@@ -137,7 +143,7 @@ class ConnectionProvider extends ChangeNotifier {
       }
       authRequired = health['auth_required'] == true;
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorFormatter.userMessage(e);
       _connState = ConnState.error;
       notifyListeners();
       return;
@@ -169,7 +175,7 @@ class ConnectionProvider extends ChangeNotifier {
       final t = await _api!.login(password).timeout(const Duration(seconds: 10));
       await _saveToken(t);
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorFormatter.userMessage(e);
       notifyListeners();
       return;
     }
