@@ -169,6 +169,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: cp.showNotifications,
             onChanged: cp.toggleNotifications,
           ),
+          _ToggleTile(
+            label: 'Reduce Motion',
+            value: cp.reduceMotion,
+            onChanged: cp.toggleReduceMotion,
+          ),
 
           const SizedBox(height: 24),
 

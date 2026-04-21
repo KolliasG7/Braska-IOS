@@ -3,8 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../providers/connection_provider.dart';
 import '../theme.dart';
 
 class FilesScreen extends StatefulWidget {
@@ -19,6 +20,8 @@ class _FilesScreenState extends State<FilesScreen> {
   bool    _loading  = true;
   String? _err;
   List<String> _history = ['/'];
+  DateTime? _lastUpdated;
+  DateTime? _lastSuccess;
 
   @override void initState() { super.initState(); _load('/'); }
 
@@ -31,10 +34,16 @@ class _FilesScreenState extends State<FilesScreen> {
         _path    = data['path'] as String;
         _items   = List<Map<String, dynamic>>.from(data['items'] as List);
         _loading = false;
+        _lastUpdated = DateTime.now();
+        _lastSuccess = _lastUpdated;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _err = e.toString(); _loading = false; });
+      setState(() {
+        _err = e.toString();
+        _loading = false;
+        _lastUpdated = DateTime.now();
+      });
     }
   }
 
@@ -157,6 +166,9 @@ class _FilesScreenState extends State<FilesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = context.watch<ConnectionProvider>().reduceMotion;
+    final stale = _lastSuccess != null &&
+        DateTime.now().difference(_lastSuccess!).inSeconds > 30;
     return Scaffold(
       backgroundColor: Bk.oled,
       appBar: AppBar(
@@ -184,9 +196,31 @@ class _FilesScreenState extends State<FilesScreen> {
             icon: const Icon(Icons.refresh_outlined, size: 18),
             onPressed: () => _load(_path)),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(20),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              _lastUpdated == null
+                  ? 'Never updated'
+                  : stale
+                      ? 'Stale (${DateTime.now().difference(_lastUpdated!).inSeconds}s ago)'
+                      : 'Updated ${DateTime.now().difference(_lastUpdated!).inSeconds}s ago',
+              style: TextStyle(
+                color: stale ? Bk.amber : Bk.textDim,
+                fontSize: 10,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
+      body: RefreshIndicator(
+        onRefresh: () => _load(_path),
+        color: Bk.white,
+        backgroundColor: Bk.surface1,
+        child: AnimatedSwitcher(
+        duration: Duration(milliseconds: reduceMotion ? 1 : 220),
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
         child: _loading
@@ -229,6 +263,7 @@ class _FilesScreenState extends State<FilesScreen> {
                           fmtSize: _fmtSize,
                         ),
                       ),
+        ),
       ),
     );
   }

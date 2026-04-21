@@ -2,7 +2,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../models/process_info.dart';
+import '../providers/connection_provider.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
 
@@ -19,6 +21,8 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
   String? _err;
   Timer? _timer;
   String _filter = '';
+  DateTime? _lastUpdated;
+  DateTime? _lastSuccess;
 
   @override
   void initState() {
@@ -34,10 +38,20 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
     try {
       final p = await widget.api.getProcesses(limit: 60, sortBy: _sort);
       if (!mounted) return;
-      setState(() { _procs = p; _loading = false; _err = null; });
+      setState(() {
+        _procs = p;
+        _loading = false;
+        _err = null;
+        _lastUpdated = DateTime.now();
+        _lastSuccess = _lastUpdated;
+      });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _err = e.toString(); _loading = false; });
+      setState(() {
+        _err = e.toString();
+        _loading = false;
+        _lastUpdated = DateTime.now();
+      });
     }
   }
 
@@ -102,7 +116,10 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = context.watch<ConnectionProvider>().reduceMotion;
     final procs = _filtered;
+    final stale = _lastSuccess != null &&
+        DateTime.now().difference(_lastSuccess!).inSeconds > 15;
     return Scaffold(
       backgroundColor: Bk.oled,
       appBar: AppBar(
@@ -141,6 +158,24 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
             icon: const Icon(Icons.refresh_outlined, size: 18),
             onPressed: _refresh),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(20),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              _lastUpdated == null
+                  ? 'Never updated'
+                  : stale
+                      ? 'Stale (${DateTime.now().difference(_lastUpdated!).inSeconds}s ago)'
+                      : 'Updated ${DateTime.now().difference(_lastUpdated!).inSeconds}s ago',
+              style: TextStyle(
+                color: stale ? Bk.amber : Bk.textDim,
+                fontSize: 10,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
       ),
       body: Column(children: [
         // Search
@@ -186,8 +221,12 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
         ),
         const Divider(color: Bk.border, height: 1),
         Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            color: Bk.white,
+            backgroundColor: Bk.surface1,
+            child: AnimatedSwitcher(
+            duration: Duration(milliseconds: reduceMotion ? 1 : 220),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
             child: _loading
@@ -213,6 +252,7 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
                           },
                         ),
                       ),
+            ),
           ),
         ),
       ]),

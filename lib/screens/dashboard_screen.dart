@@ -39,6 +39,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final cp    = context.watch<ConnectionProvider>();
     final frame = cp.frame;
     final cpu   = frame?.cpu?.percent ?? 0;
+    final animMs = cp.reduceMotion ? 1 : 260;
+    final iconAnimMs = cp.reduceMotion ? 1 : 220;
 
     return Scaffold(
       backgroundColor: Bk.oled,
@@ -52,7 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               MaterialPageRoute(builder: (_) => const SettingsScreen()))),
           Expanded(
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 260),
+              duration: Duration(milliseconds: animMs),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
               transitionBuilder: (child, animation) {
@@ -77,6 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       bottomNavigationBar: _Nav(
         selected:    _tab,
+        reduceMotion: cp.reduceMotion,
         onTap:       (i) {
           if (i == _tab) return;
           HapticFeedback.selectionClick();
@@ -91,10 +94,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 // ── 6-tab nav ─────────────────────────────────────────────────────────────
 
 class _Nav extends StatelessWidget {
-  const _Nav({required this.selected, required this.onTap, required this.hasCpuAlert});
+  const _Nav({
+    required this.selected,
+    required this.onTap,
+    required this.hasCpuAlert,
+    required this.reduceMotion,
+  });
   final int selected;
   final void Function(int) onTap;
   final bool hasCpuAlert;
+  final bool reduceMotion;
 
   static const _tabs = [
     (icon: Icons.monitor_heart_outlined,  label: 'MONITOR', badge: false),
@@ -123,11 +132,12 @@ class _Nav extends StatelessWidget {
               final tab = _tabs[i];
               final sel = i == selected;
               final col = sel ? Bk.oled : Bk.textDim;
+              final iconAnimMs = reduceMotion ? 1 : 220;
               return GestureDetector(
                 onTap: () => onTap(i),
                 behavior: HitTestBehavior.opaque,
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration: Duration(milliseconds: reduceMotion ? 1 : 200),
                   curve: Curves.easeOutCubic,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 6),
@@ -140,20 +150,47 @@ class _Nav extends StatelessWidget {
                       isLabelVisible: tab.badge && hasCpuAlert,
                       backgroundColor: Bk.white,
                       smallSize: 6,
-                      child: AnimatedScale(
-                        scale: sel ? 1.08 : 1,
-                        duration: const Duration(milliseconds: 170),
-                        curve: Curves.easeOutBack,
-                        child: Icon(
-                          tab.icon,
-                          color: col,
-                          size: sel ? 19 : 17,
+                      child: AnimatedSwitcher(
+                        duration: Duration(milliseconds: iconAnimMs),
+                        switchInCurve: Curves.easeOutBack,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: ScaleTransition(
+                              scale: Tween<double>(begin: 0.86, end: 1).animate(animation),
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0, 0.12),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            ),
+                          );
+                        },
+                        child: TweenAnimationBuilder<double>(
+                          key: ValueKey('icon-$i-$sel'),
+                          duration: Duration(milliseconds: reduceMotion ? 1 : 190),
+                          curve: Curves.easeOutCubic,
+                          tween: Tween<double>(
+                            begin: sel ? 0.9 : 1.08,
+                            end: sel ? 1.08 : 1,
+                          ),
+                          builder: (_, scale, __) => Transform.scale(
+                            scale: scale,
+                            child: Icon(
+                              tab.icon,
+                              color: col,
+                              size: sel ? 19 : 17,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 3),
                     AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 180),
+                      duration: Duration(milliseconds: reduceMotion ? 1 : 180),
                       curve: Curves.easeOutCubic,
                       style: TextStyle(
                         color: col,
