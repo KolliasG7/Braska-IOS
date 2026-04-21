@@ -15,7 +15,8 @@ class ConnectScreen extends StatefulWidget {
   @override State<ConnectScreen> createState() => _ConnectScreenState();
 }
 
-class _ConnectScreenState extends State<ConnectScreen> {
+class _ConnectScreenState extends State<ConnectScreen>
+    with SingleTickerProviderStateMixin {
   final _ctrl    = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isTunnel = false;
@@ -25,12 +26,27 @@ class _ConnectScreenState extends State<ConnectScreen> {
   List<PayloadRecord> _payloadHistory = [];
   final _payloadSender = const PayloadSenderService();
 
+  late final AnimationController _entranceCtrl;
+  late final Animation<double>   _entranceFade;
+  late final Animation<Offset>   _entranceSlide;
+
   @override
   void initState() {
     super.initState();
     final cp = context.read<ConnectionProvider>();
     _ctrl.text = cp.rawInput;
     _isTunnel  = cp.isTunnel;
+    // Gentle fade + rise on first appearance. Paired with the root-level
+    // zoom-through, this makes the Connect screen settle in instead of
+    // just snapping.
+    _entranceCtrl = AnimationController(
+      vsync: this, duration: AppDurations.med,
+    )..forward();
+    _entranceFade = CurvedAnimation(
+      parent: _entranceCtrl, curve: AppCurves.enter);
+    _entranceSlide = Tween<Offset>(
+      begin: const Offset(0, 0.02), end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entranceCtrl, curve: AppCurves.enter));
     _loadLastTunnel();
     _loadPayloadHistory();
   }
@@ -163,7 +179,11 @@ class _ConnectScreenState extends State<ConnectScreen> {
         backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: true,
         body: SafeArea(
-          child: Form(
+          child: FadeTransition(
+            opacity: _entranceFade,
+            child: SlideTransition(
+              position: _entranceSlide,
+              child: Form(
             key: _formKey,
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -315,6 +335,8 @@ class _ConnectScreenState extends State<ConnectScreen> {
               ]),
             ),
           ),
+            ),
+          ),
         ),
       ),
     );
@@ -437,7 +459,11 @@ class _ConnectScreenState extends State<ConnectScreen> {
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _entranceCtrl.dispose();
+    _ctrl.dispose();
+    super.dispose();
+  }
 }
 
 // ── Widgets ────────────────────────────────────────────────────────────────
@@ -592,10 +618,12 @@ class _ModeSegmented extends StatelessWidget {
           // Sliding glass thumb. Uses an eased curve and the accent for a
           // soft glow so it feels like the pill physically moves.
           AnimatedPositioned(
-            // 520ms was molasses for a two-state toggle; iOS segmented
-            // controls snap in ~220ms so the pill feels physical.
-            duration: reduceMotion ? Duration.zero : AppDurations.fast,
-            curve: AppCurves.emphasized,
+            // Spring-ish settle: a touch of overshoot makes the pill feel
+            // like it snaps into place instead of sliding over.
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 320),
+            curve: Curves.easeOutBack,
             left: isTunnel ? segW : 0,
             top: 0,
             bottom: 0,

@@ -8,6 +8,7 @@ import '../models/process_info.dart';
 import '../services/ws_service.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
+import '../widgets/motion.dart';
 import '../widgets/overview_widgets.dart';
 import '../widgets/fan_control.dart';
 import '../widgets/led_panel.dart';
@@ -25,7 +26,6 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   int _tab = 0;
-  int _prevTab = 0;
 
   late AnimationController _entranceCtrl;
   late Animation<double>   _entranceFade;
@@ -64,7 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     HapticFeedback.selectionClick();
     Navigator.push(
       context,
-      SlideUpRoute(child: const SettingsScreen()),
+      FadeThroughRoute(child: const SettingsScreen()),
     );
   }
 
@@ -94,43 +94,20 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                   Expanded(
                     child: AnimatedSwitcher(
-                      // The old 520ms slow + 0.08 slide made every tab tap
-                      // feel like it stuttered. iOS segmented content swaps
-                      // in ~220ms; match that and keep the slide subtle.
+                      // Peer-destination transition: fade + subtle scale,
+                      // no horizontal slide. The shared nav pill below
+                      // carries the spatial meaning so the body just
+                      // needs to reveal cleanly with a little depth cue.
                       duration: reduceMotion
                           ? Duration.zero
-                          : AppDurations.fast,
+                          : const Duration(milliseconds: 300),
                       reverseDuration: reduceMotion
                           ? Duration.zero
-                          : const Duration(milliseconds: 160),
+                          : const Duration(milliseconds: 200),
                       switchInCurve: AppCurves.enter,
                       switchOutCurve: AppCurves.exit,
-                      // Put the incoming child on top so the outgoing one
-                      // fades out underneath without ghosting the gradient.
-                      layoutBuilder: (currentChild, previousChildren) => Stack(
-                        alignment: Alignment.topCenter,
-                        children: <Widget>[
-                          ...previousChildren,
-                          if (currentChild != null) currentChild,
-                        ],
-                      ),
-                      transitionBuilder: (child, animation) {
-                        final isForward = _tab >= _prevTab;
-                        final beginX = isForward ? 0.03 : -0.03;
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: Offset(beginX, 0),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: animation,
-                              curve: AppCurves.enter,
-                            )),
-                            child: child,
-                          ),
-                        );
-                      },
+                      layoutBuilder: stackedLayoutBuilder,
+                      transitionBuilder: tabBodyTransition,
                       child: KeyedSubtree(
                         key: ValueKey<int>(_tab),
                         child: _tabBody(frame, cp),
@@ -146,7 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 reduceMotion: reduceMotion,
                 selectedIndex: _tab,
                 onTap: (i) {
-                  setState(() { _prevTab = _tab; _tab = i; });
+                  setState(() => _tab = i);
                 },
                 destinations: [
                   NavDestination(

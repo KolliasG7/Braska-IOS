@@ -2,6 +2,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../widgets/motion.dart';
 import 'tokens.dart';
 
 /// Shared background used under every screen. Stack content on top and make
@@ -103,23 +104,63 @@ class GlassBottomNav extends StatelessWidget {
               ],
             ),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(destinations.length, (i) {
-                return Expanded(
-                  child: _NavItem(
-                    dest: destinations[i],
-                    selected: i == selectedIndex,
-                    reduceMotion: reduceMotion,
-                    onTap: () {
-                      if (i == selectedIndex) return;
-                      HapticFeedback.selectionClick();
-                      onTap(i);
-                    },
+            child: LayoutBuilder(builder: (context, constraints) {
+              // Shared-element selection pill: instead of each item fading
+              // its own background (which reads as 5 disconnected
+              // animations), we position a single translucent pill behind
+              // the row and slide it to the selected index. That spatial
+              // continuity is what makes the bar feel designed.
+              final slotWidth = constraints.maxWidth / destinations.length;
+              return Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: reduceMotion
+                        ? Duration.zero
+                        : AppDurations.med,
+                    curve: AppCurves.emphasized,
+                    left: slotWidth * selectedIndex,
+                    top: 0,
+                    bottom: 0,
+                    width: slotWidth,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Bk.accent.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          border: Border.all(
+                            color: Bk.accent.withOpacity(0.42), width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Bk.accent.withOpacity(0.18),
+                              blurRadius: 14,
+                              spreadRadius: -2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                );
-              }),
-            ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(destinations.length, (i) {
+                      return Expanded(
+                        child: _NavItem(
+                          dest: destinations[i],
+                          selected: i == selectedIndex,
+                          reduceMotion: reduceMotion,
+                          onTap: () {
+                            if (i == selectedIndex) return;
+                            HapticFeedback.selectionClick();
+                            onTap(i);
+                          },
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              );
+            }),
           ),
         ),
       ),
@@ -153,53 +194,54 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final duration = reduceMotion ? Duration.zero : AppDurations.med;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: duration,
-        curve: AppCurves.emphasized,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? Bk.accent.withOpacity(0.20) : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: selected
-              ? Border.all(color: Bk.accent.withOpacity(0.45), width: 1)
-              : null,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(clipBehavior: Clip.none, children: [
-              Icon(
-                dest.icon,
-                size: 20,
-                color: selected ? Bk.accent : Bk.textSec,
-              ),
-              if (dest.badge)
-                Positioned(
-                  right: -3,
-                  top: -2,
-                  child: Container(
-                    width: 6, height: 6,
-                    decoration: const BoxDecoration(
-                      color: Bk.danger, shape: BoxShape.circle,
-                    ),
+    // The shared pill carries the selection background; each item just
+    // animates its own icon/text color so the two layers stay in lockstep.
+    return PressScale(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(clipBehavior: Clip.none, children: [
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: selected ? 1.0 : 0.0),
+                  duration: duration,
+                  curve: AppCurves.standard,
+                  builder: (_, v, __) => Icon(
+                    dest.icon,
+                    size: 20,
+                    color: Color.lerp(Bk.textSec, Bk.accent, v),
                   ),
                 ),
-            ]),
-            const SizedBox(height: 3),
-            AnimatedDefaultTextStyle(
-              duration: duration,
-              style: TextStyle(
-                color: selected ? Bk.accent : Bk.textDim,
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                letterSpacing: 0.3,
+                if (dest.badge)
+                  Positioned(
+                    right: -3,
+                    top: -2,
+                    child: Container(
+                      width: 6, height: 6,
+                      decoration: const BoxDecoration(
+                        color: Bk.danger, shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ]),
+              const SizedBox(height: 3),
+              AnimatedDefaultTextStyle(
+                duration: duration,
+                curve: AppCurves.standard,
+                style: TextStyle(
+                  color: selected ? Bk.accent : Bk.textDim,
+                  fontSize: 10,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+                child: Text(dest.label),
               ),
-              child: Text(dest.label),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

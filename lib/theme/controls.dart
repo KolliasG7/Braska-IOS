@@ -2,6 +2,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../widgets/motion.dart';
 import 'tokens.dart';
 import 'typography.dart';
 
@@ -91,6 +92,9 @@ class AppButton extends StatelessWidget {
         child: body,
       ),
     );
+    // Squeeze on press so every primary action in the app shares the same
+    // tactile "something happened" cue.
+    body = PressScale(enabled: !disabled, child: body);
     return expand ? SizedBox(width: double.infinity, child: body) : body;
   }
 }
@@ -137,6 +141,7 @@ class GlassIconButton extends StatelessWidget {
         child: btn,
       ),
     );
+    btn = PressScale(enabled: onPressed != null, child: btn);
     return tooltip == null ? btn : Tooltip(message: tooltip!, child: btn);
   }
 }
