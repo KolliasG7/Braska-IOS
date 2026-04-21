@@ -391,7 +391,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                                   _lastTunnelUrl!.replaceAll('https://', ''),
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 12)),
+                                    fontSize: 12),
                                   overflow: TextOverflow.ellipsis)),
                                 const SizedBox(width: 8),
                                 Container(
