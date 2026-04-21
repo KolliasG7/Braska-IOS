@@ -48,24 +48,36 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(radius);
+    // Glass fill and the optional tint gradient live on separate layers so
+    // the tint (which fades to transparent) never erases the frosted fill,
+    // and the caller's intended alpha is preserved instead of being clobbered
+    // by a hardcoded opacity.
+    Widget body = Container(
+      decoration: BoxDecoration(
+        color: _fill,
+        borderRadius: borderRadius,
+        border: Border.all(color: _border, width: 1),
+      ),
+      child: tint == null
+          ? Padding(padding: padding, child: child)
+          : Container(
+              decoration: BoxDecoration(
+                borderRadius: borderRadius,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [tint!, tint!.withOpacity(0)],
+                ),
+              ),
+              padding: padding,
+              child: child,
+            ),
+    );
     Widget content = ClipRRect(
       borderRadius: borderRadius,
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _fill,
-            borderRadius: borderRadius,
-            border: Border.all(color: _border, width: 1),
-            gradient: tint == null ? null : LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [tint!.withOpacity(0.9), tint!.withOpacity(0.0)],
-            ),
-          ),
-          padding: padding,
-          child: child,
-        ),
+        child: body,
       ),
     );
 

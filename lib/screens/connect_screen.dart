@@ -121,9 +121,11 @@ class _ConnectScreenState extends State<ConnectScreen> {
       ),
     );
 
-    Future.delayed(AppDurations.med, () {
-      if (mounted) ctrl.dispose();
-    });
+    // TextEditingController.dispose() is safe to call after the widget has
+    // unmounted, so no `mounted` guard here — otherwise the controller would
+    // leak whenever the connect screen is swapped out while the dialog is
+    // still dismissing.
+    Future.delayed(AppDurations.med, ctrl.dispose);
   }
 
   void _useTunnelUrl(String url) {
@@ -374,11 +376,12 @@ class _ConnectScreenState extends State<ConnectScreen> {
       ),
     );
 
+    // Dispose unconditionally — `TextEditingController.dispose()` is safe
+    // regardless of widget lifecycle, and the `mounted` guard would leak
+    // the controllers when the user disconnects mid-dialog.
     Future.delayed(AppDurations.med, () {
-      if (mounted) {
-        ipCtrl.dispose();
-        portCtrl.dispose();
-      }
+      ipCtrl.dispose();
+      portCtrl.dispose();
     });
   }
 
