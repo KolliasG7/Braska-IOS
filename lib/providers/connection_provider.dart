@@ -6,6 +6,7 @@ import '../models/telemetry.dart';
 import '../services/api_service.dart';
 import '../services/ws_service.dart';
 import '../services/notification_service.dart';
+import '../services/error_formatter.dart';
 
 enum ConnState { idle, connecting, connected, error, needsAuth }
 
@@ -137,7 +138,7 @@ class ConnectionProvider extends ChangeNotifier {
       }
       authRequired = health['auth_required'] == true;
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorFormatter.userMessage(e);
       _connState = ConnState.error;
       notifyListeners();
       return;
@@ -169,7 +170,7 @@ class ConnectionProvider extends ChangeNotifier {
       final t = await _api!.login(password).timeout(const Duration(seconds: 10));
       await _saveToken(t);
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorFormatter.userMessage(e);
       notifyListeners();
       return;
     }

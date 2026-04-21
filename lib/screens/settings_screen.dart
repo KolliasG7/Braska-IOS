@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/connection_provider.dart';
 import '../services/payload_history_service.dart';
+import '../services/payload_sender_service.dart';
+import '../services/error_formatter.dart';
 import '../theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -21,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<PayloadRecord> _history = [];
   File? _selectedFile;
   bool  _sending = false;
+  final _payloadSender = const PayloadSenderService();
 
   @override
   void initState() {
@@ -64,8 +67,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         style: const TextStyle(color: Bk.white, fontSize: 12))));
 
     try {
-      final socket = await Socket.connect(ip, port,
-        timeout: const Duration(seconds: 10));
+      await _payloadSender.send(
+        ip: ip,
+        port: port,
+        file: file,
+        timeout: const Duration(seconds: 10),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).clearSnackBars();
 
@@ -74,10 +81,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Bk.surface2,
         content: Text('Sending $fileName...',
           style: const TextStyle(color: Bk.textSec, fontSize: 12))));
-
-      await socket.addStream(file.openRead());
-      await socket.flush();
-      socket.destroy();
 
       await PayloadHistoryService.save(PayloadRecord(
         ip:       ip,
@@ -99,7 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error: $e',
+        content: Text('Error: ${ErrorFormatter.userMessage(e)}',
           style: const TextStyle(color: Colors.white, fontSize: 12)),
         backgroundColor: Colors.red.shade900));
     }

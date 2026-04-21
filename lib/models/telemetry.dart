@@ -14,14 +14,14 @@ class CpuData {
   });
 
   factory CpuData.fromJson(Map<String, dynamic> j) => CpuData(
-    percent:    (j['percent']      as num).toDouble(),
-    perCore:    (j['per_core']  as List).map((e) => (e as num).toDouble()).toList(),
-    coreCount:  (j['core_count']   as num).toInt(),
-    freqMhz:    (j['freq_mhz']     as num).toDouble(),
-    freqMaxMhz: (j['freq_max_mhz'] as num? ?? 0).toDouble(),
-    load1:      (j['load_1']       as num).toDouble(),
-    load5:      (j['load_5']       as num).toDouble(),
-    load15:     (j['load_15']      as num).toDouble(),
+    percent:    _num(j['percent']),
+    perCore:    _numList(j['per_core']),
+    coreCount:  _int(j['core_count']),
+    freqMhz:    _num(j['freq_mhz']),
+    freqMaxMhz: _num(j['freq_max_mhz']),
+    load1:      _num(j['load_1']),
+    load5:      _num(j['load_5']),
+    load15:     _num(j['load_15']),
   );
 }
 
@@ -34,12 +34,12 @@ class RamData {
   });
 
   factory RamData.fromJson(Map<String, dynamic> j) => RamData(
-    totalMb:    (j['total_mb']     as num).toDouble(),
-    usedMb:     (j['used_mb']      as num).toDouble(),
-    availableMb:(j['available_mb'] as num).toDouble(),
-    cachedMb:   (j['cached_mb']    as num? ?? 0).toDouble(),
-    buffersMb:  (j['buffers_mb']   as num? ?? 0).toDouble(),
-    percent:    (j['percent']      as num).toDouble(),
+    totalMb:    _num(j['total_mb']),
+    usedMb:     _num(j['used_mb']),
+    availableMb:_num(j['available_mb']),
+    cachedMb:   _num(j['cached_mb']),
+    buffersMb:  _num(j['buffers_mb']),
+    percent:    _num(j['percent']),
   );
 }
 
@@ -47,9 +47,9 @@ class SwapData {
   final double totalMb, usedMb, percent;
   const SwapData({required this.totalMb, required this.usedMb, required this.percent});
   factory SwapData.fromJson(Map<String, dynamic> j) => SwapData(
-    totalMb: (j['total_mb'] as num).toDouble(),
-    usedMb:  (j['used_mb']  as num).toDouble(),
-    percent: (j['percent']  as num).toDouble(),
+    totalMb: _num(j['total_mb']),
+    usedMb:  _num(j['used_mb']),
+    percent: _num(j['percent']),
   );
 }
 
@@ -67,12 +67,12 @@ class DiskData {
     mount:    j['mount']    as String? ?? '',
     device:   j['device']   as String? ?? '',
     fstype:   j['fstype']   as String? ?? '',
-    totalGb:  (j['total_gb'] as num).toDouble(),
-    usedGb:   (j['used_gb']  as num).toDouble(),
-    freeGb:   (j['free_gb']  as num).toDouble(),
-    percent:  (j['percent']  as num).toDouble(),
-    readBps:  (j['read_bps']  as num? ?? 0).toDouble(),
-    writeBps: (j['write_bps'] as num? ?? 0).toDouble(),
+    totalGb:  _num(j['total_gb']),
+    usedGb:   _num(j['used_gb']),
+    freeGb:   _num(j['free_gb']),
+    percent:  _num(j['percent']),
+    readBps:  _num(j['read_bps']),
+    writeBps: _num(j['write_bps']),
   );
 }
 
@@ -89,12 +89,12 @@ class NetData {
 
   factory NetData.fromJson(Map<String, dynamic> j) => NetData(
     iface:       j['iface']         as String? ?? '',
-    bytesSentS:  (j['bytes_sent_s'] as num).toDouble(),
-    bytesRecvS:  (j['bytes_recv_s'] as num).toDouble(),
-    packetsSent: (j['packets_sent'] as num? ?? 0).toInt(),
-    packetsRecv: (j['packets_recv'] as num? ?? 0).toInt(),
-    errin:       (j['errin']        as num? ?? 0).toInt(),
-    errout:      (j['errout']       as num? ?? 0).toInt(),
+    bytesSentS:  _num(j['bytes_sent_s']),
+    bytesRecvS:  _num(j['bytes_recv_s']),
+    packetsSent: _int(j['packets_sent']),
+    packetsRecv: _int(j['packets_recv']),
+    errin:       _int(j['errin']),
+    errout:      _int(j['errout']),
   );
 }
 
@@ -103,9 +103,9 @@ class FanData {
   final double apuTempC;
   const FanData({required this.rpm, required this.thresholdC, required this.apuTempC});
   factory FanData.fromJson(Map<String, dynamic> j) => FanData(
-    rpm:        (j['rpm']         as num).toInt(),
-    thresholdC: (j['threshold_c'] as num).toInt(),
-    apuTempC:   (j['apu_temp_c']  as num).toDouble(),
+    rpm:        _int(j['rpm']),
+    thresholdC: _int(j['threshold_c']),
+    apuTempC:   _num(j['apu_temp_c']),
   );
 }
 
@@ -142,18 +142,21 @@ class TelemetryFrame {
 
   factory TelemetryFrame.fromJson(Map<String, dynamic> j) {
     if (j.containsKey('error')) {
-      return TelemetryFrame(ts: (j['ts'] as num).toDouble(), error: j['error'] as String);
+      return TelemetryFrame(
+        ts: _num(j['ts']),
+        error: j['error'] as String? ?? 'Unknown telemetry error',
+      );
     }
     return TelemetryFrame(
-      ts:      (j['ts']       as num).toDouble(),
-      fan:     j['fan']  != null ? FanData.fromJson(j['fan'])   : null,
-      cpu:     j['cpu']  != null ? CpuData.fromJson(j['cpu'])   : null,
-      ram:     j['ram']  != null ? RamData.fromJson(j['ram'])   : null,
-      swap:    j['swap'] != null ? SwapData.fromJson(j['swap']) : null,
-      disk:    (j['disk'] as List? ?? []).map((e) => DiskData.fromJson(e)).toList(),
-      net:     (j['net']  as List? ?? []).map((e) => NetData.fromJson(e)).toList(),
-      uptimeS: (j['uptime_s'] as num? ?? 0).toInt(),
-      tunnel:  j['tunnel'] != null ? TunnelStatus.fromJson(j['tunnel']) : null,
+      ts:      _num(j['ts']),
+      fan:     j['fan'] is Map ? FanData.fromJson(Map<String, dynamic>.from(j['fan'])) : null,
+      cpu:     j['cpu'] is Map ? CpuData.fromJson(Map<String, dynamic>.from(j['cpu'])) : null,
+      ram:     j['ram'] is Map ? RamData.fromJson(Map<String, dynamic>.from(j['ram'])) : null,
+      swap:    j['swap'] is Map ? SwapData.fromJson(Map<String, dynamic>.from(j['swap'])) : null,
+      disk:    _mapList(j['disk']).map(DiskData.fromJson).toList(),
+      net:     _mapList(j['net']).map(NetData.fromJson).toList(),
+      uptimeS: _int(j['uptime_s']),
+      tunnel:  j['tunnel'] is Map ? TunnelStatus.fromJson(Map<String, dynamic>.from(j['tunnel'])) : null,
     );
   }
 
@@ -173,4 +176,26 @@ class TelemetryFrame {
       orElse: () => net.firstWhere((n) => n.iface != 'lo', orElse: () => net.first),
     );
   }
+}
+
+double _num(dynamic value, [double fallback = 0.0]) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+int _int(dynamic value, [int fallback = 0]) {
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+List<double> _numList(dynamic value) {
+  if (value is! List) return const [];
+  return value.map((e) => _num(e)).toList();
+}
+
+List<Map<String, dynamic>> _mapList(dynamic value) {
+  if (value is! List) return const [];
+  return value.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
 }
