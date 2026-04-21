@@ -68,3 +68,9 @@ adb install build/app/outputs/flutter-apk/app-release.apk
 
 ## License
 [MIT License](LICENSE)
+
+
+
+
+
+CREDITS TO https://github.com/rmuxnet
