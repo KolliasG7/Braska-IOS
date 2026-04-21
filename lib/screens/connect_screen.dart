@@ -602,7 +602,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
             ),
           ),
         ),
-      ]),
+      ),
     );
   }
 

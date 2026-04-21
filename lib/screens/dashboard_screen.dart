@@ -422,9 +422,9 @@ class _ModernTopBar extends StatelessWidget {
                           fontSize: 12,
                         ),
                       )
-                    : const Text(
-                        key: const ValueKey('connecting'),
+                    : Text(
                         'Connecting...',
+                        key: const ValueKey('connecting'),
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
                           fontSize: 12,
