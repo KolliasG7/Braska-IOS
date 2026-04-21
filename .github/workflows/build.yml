@@ -2,7 +2,7 @@ name: Build iOS IPA
 
 on:
   push:
-    branches: [main, chore/hardening-telemetry-errors]
+    branches: ['**']  # Run on any branch
   workflow_dispatch:
     inputs:
       reason:
