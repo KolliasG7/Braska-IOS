@@ -80,6 +80,38 @@ class ApiService {
     }
   }
 
+  /// Rotates the remote password. Requires a valid bearer token (the
+  /// caller's current session) *and* the current plaintext password —
+  /// both checks are enforced server-side. Returns the fresh token the
+  /// backend emits so the client can keep the session open without a
+  /// round-trip through /auth/login.
+  ///
+  /// Not wrapped in the retry policy on purpose: a 500 here could mean
+  /// the new hash was persisted but the response was dropped, in which
+  /// case a naive retry would fail with "current password incorrect"
+  /// (the hash has already rotated). Let the caller decide.
+  Future<String> rotatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final r = await http.post(
+      _u('/auth/change-password'),
+      headers: _h,
+      body: jsonEncode({
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      }),
+    ).timeout(const Duration(seconds: 10));
+    _chk(r);
+    final decoded = jsonDecode(r.body);
+    final t = (decoded is Map ? decoded['token'] : null) as String?;
+    if (t == null || t.isEmpty) {
+      throw ApiException(500, 'No token in rotate-password response');
+    }
+    token = t;
+    return t;
+  }
+
   // ── Health ───────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getHealth() async {

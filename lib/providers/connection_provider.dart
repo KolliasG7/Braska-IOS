@@ -257,6 +257,25 @@ class ConnectionProvider extends ChangeNotifier {
     if (_api != null) _api!.token = '';
   }
 
+  /// Rotates the remote password on the backend and persists the fresh
+  /// token the backend emits, so the session keeps working without a
+  /// re-login. Throws on failure (wrong current password, network,
+  /// server error) — the Settings screen surfaces the message.
+  Future<void> rotatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if (_api == null) {
+      throw StateError('Not connected.');
+    }
+    final t = await _api!.rotatePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+    await _saveToken(t);
+    notifyListeners();
+  }
+
   void _teardown() {
     _wsSub?.cancel();
     _wsStateSub?.cancel();

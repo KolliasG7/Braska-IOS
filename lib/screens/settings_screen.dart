@@ -142,6 +142,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _snack('Token cleared — re-authenticate to continue');
   }
 
+  Future<void> _doChangePassword() async {
+    HapticFeedback.selectionClick();
+    final changed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _ChangePasswordDialog(),
+    );
+    if (changed == true && mounted) {
+      _snack('Password changed — session kept alive', success: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cp = context.watch<ConnectionProvider>();
@@ -311,6 +323,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ]),
                   ),
+                  if (cp.hasToken) ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    _Section(
+                      icon: Icons.lock_outline,
+                      title: 'Security',
+                      content: AppButton(
+                        label: 'Change password',
+                        icon: Icons.key_outlined,
+                        variant: ButtonVariant.glass,
+                        onPressed: (_disconnecting || _clearingToken)
+                            ? null : _doChangePassword,
+                        expand: true,
+                      ),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: AppSpacing.xxl),
                 const _AboutFooter(),
@@ -613,6 +640,175 @@ class _HistoryTile extends StatelessWidget {
         Text(timeAgo, style: const TextStyle(
           color: Bk.textDim, fontSize: 11, letterSpacing: 0.3)),
       ]),
+    );
+  }
+}
+
+// ── Change password dialog ────────────────────────────────────────────────
+// Three-field password rotation (current / new / confirm). Client-side
+// validation is deliberately a thin sanity layer — the backend is the
+// source of truth for min length, current-password check, rate-limiting,
+// etc. Whatever the server rejects with gets surfaced verbatim so users
+// can see exactly why (e.g. "Current password is incorrect.", "New
+// password must be at least 4 characters.", "Too many failed attempts.").
+
+class _ChangePasswordDialog extends StatefulWidget {
+  const _ChangePasswordDialog();
+
+  @override
+  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+  final _currentCtrl = TextEditingController();
+  final _newCtrl     = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+
+  bool _obscureCurrent = true;
+  bool _obscureNew     = true;
+  bool _obscureConfirm = true;
+
+  bool    _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _currentCtrl.dispose();
+    _newCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final current = _currentCtrl.text;
+    final next    = _newCtrl.text;
+    final confirm = _confirmCtrl.text;
+
+    if (current.isEmpty || next.isEmpty || confirm.isEmpty) {
+      setState(() => _error = 'All three fields are required.');
+      return;
+    }
+    if (next != confirm) {
+      setState(() => _error = 'New password and confirmation do not match.');
+      return;
+    }
+    if (next == current) {
+      setState(() => _error = 'New password must differ from the current one.');
+      return;
+    }
+
+    setState(() { _submitting = true; _error = null; });
+    try {
+      await context.read<ConnectionProvider>().rotatePassword(
+        currentPassword: current,
+        newPassword: next,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = ErrorFormatter.userMessage(e);
+      });
+    }
+  }
+
+  InputDecoration _dec(String label, {required VoidCallback onToggle, required bool obscured}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Bk.textSec, fontSize: 13),
+      filled: true,
+      fillColor: Bk.surface1,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: 12),
+      suffixIcon: IconButton(
+        icon: Icon(obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                   color: Bk.textDim, size: 18),
+        onPressed: _submitting ? null : onToggle,
+        splashRadius: 18,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Bk.surface2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.lg)),
+      titlePadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
+      contentPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+      title: const Text('Change password',
+        style: TextStyle(color: Bk.textPri, fontSize: 16, fontWeight: FontWeight.w700)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _currentCtrl,
+            obscureText: _obscureCurrent,
+            enabled: !_submitting,
+            autofocus: true,
+            style: const TextStyle(color: Bk.textPri, fontSize: 14),
+            cursorColor: Bk.accent,
+            decoration: _dec('Current password',
+              obscured: _obscureCurrent,
+              onToggle: () => setState(() => _obscureCurrent = !_obscureCurrent)),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _newCtrl,
+            obscureText: _obscureNew,
+            enabled: !_submitting,
+            style: const TextStyle(color: Bk.textPri, fontSize: 14),
+            cursorColor: Bk.accent,
+            decoration: _dec('New password',
+              obscured: _obscureNew,
+              onToggle: () => setState(() => _obscureNew = !_obscureNew)),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _confirmCtrl,
+            obscureText: _obscureConfirm,
+            enabled: !_submitting,
+            onSubmitted: (_) => _submitting ? null : _submit(),
+            style: const TextStyle(color: Bk.textPri, fontSize: 14),
+            cursorColor: Bk.accent,
+            decoration: _dec('Confirm new password',
+              obscured: _obscureConfirm,
+              onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm)),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(_error!,
+              style: const TextStyle(color: Bk.danger, fontSize: 12)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel',
+            style: TextStyle(color: Bk.textSec)),
+        ),
+        TextButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+            ? const SizedBox(
+                width: 16, height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Bk.accent))
+            : const Text('Change',
+                style: TextStyle(color: Bk.accent, fontWeight: FontWeight.w700)),
+        ),
+      ],
     );
   }
 }
