@@ -5,6 +5,79 @@ import 'tokens.dart';
 
 enum GlassStyle { subtle, normal, raised }
 
+/// Specular sheen painted over a glass surface. Gives the top-edge bright
+/// highlight + soft diagonal hotspot that reads as "liquid glass" rather
+/// than a flat translucent panel. Fully decorative — absorbs no hit events.
+class LiquidGlassSheen extends StatelessWidget {
+  const LiquidGlassSheen({
+    super.key,
+    required this.borderRadius,
+    this.intensity = 1.0,
+    this.shape = BoxShape.rectangle,
+  });
+
+  final BorderRadius borderRadius;
+  final double intensity;
+  final BoxShape shape;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget stack = IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Top-edge specular highlight: bright along the top, fading fast.
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withOpacity(0.26 * intensity),
+                  Colors.white.withOpacity(0.06 * intensity),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.18, 0.55],
+              ),
+            ),
+          ),
+          // Diagonal hotspot from top-left — mimics a soft overhead light.
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: const Alignment(-1.0, -1.0),
+                end: const Alignment(0.4, 0.3),
+                colors: [
+                  Colors.white.withOpacity(0.14 * intensity),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+          // Subtle bottom dim — reads as "thickness" / refractive depth.
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  Colors.black.withOpacity(0.10 * intensity),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.35],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    // Clip so the sheen gradients never bleed past the glass edges.
+    return shape == BoxShape.circle
+        ? ClipOval(child: stack)
+        : ClipRRect(borderRadius: borderRadius, child: stack);
+  }
+}
+
 /// Translucent frosted-glass card. Uses a BackdropFilter so the dark gradient
 /// background shows through a blurred layer. Stack under an `AppShell` or any
 /// scaffold with a non-opaque background for the effect to be visible.
@@ -48,6 +121,11 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(radius);
+    final sheenIntensity = switch (subtle ? GlassStyle.subtle : style) {
+      GlassStyle.subtle => 0.7,
+      GlassStyle.normal => 1.0,
+      GlassStyle.raised => 1.15,
+    };
     // Glass fill and the optional tint gradient live on separate layers so
     // the tint (which fades to transparent) never erases the frosted fill,
     // and the caller's intended alpha is preserved instead of being clobbered
@@ -73,10 +151,24 @@ class GlassCard extends StatelessWidget {
               child: child,
             ),
     );
+    // Layer the specular sheen over the body so the card reads as glass
+    // rather than a flat translucent panel. `body` is the non-positioned
+    // child so the Stack sizes to the padded content.
+    body = Stack(
+      children: [
+        body,
+        Positioned.fill(
+          child: LiquidGlassSheen(
+            borderRadius: borderRadius,
+            intensity: sheenIntensity,
+          ),
+        ),
+      ],
+    );
     Widget content = ClipRRect(
       borderRadius: borderRadius,
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
         child: body,
       ),
     );
@@ -141,15 +233,25 @@ class GlassPill extends StatelessWidget {
     Widget inner = ClipRRect(
       borderRadius: borderRadius,
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: fill,
-            borderRadius: borderRadius,
-            border: Border.all(color: borderColor, width: 1),
-          ),
-          child: child,
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Stack(
+          children: [
+            Container(
+              padding: padding,
+              decoration: BoxDecoration(
+                color: fill,
+                borderRadius: borderRadius,
+                border: Border.all(color: borderColor, width: 1),
+              ),
+              child: child,
+            ),
+            Positioned.fill(
+              child: LiquidGlassSheen(
+                borderRadius: borderRadius,
+                intensity: selected ? 0.85 : 0.95,
+              ),
+            ),
+          ],
         ),
       ),
     );

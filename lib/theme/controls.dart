@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/motion.dart';
+import 'glass.dart';
 import 'tokens.dart';
 import 'typography.dart';
 
@@ -67,14 +68,21 @@ class AppButton extends StatelessWidget {
       : ClipRRect(
           borderRadius: radius,
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: radius,
-                border: border == null ? null : Border.all(color: border, width: 1),
-              ),
-              child: content,
+            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: radius,
+                    border: border == null ? null : Border.all(color: border, width: 1),
+                  ),
+                  child: content,
+                ),
+                Positioned.fill(
+                  child: LiquidGlassSheen(borderRadius: radius),
+                ),
+              ],
             ),
           ),
         );
@@ -117,15 +125,28 @@ class GlassIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget btn = ClipOval(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: SizedBox(
           width: size, height: size,
-          decoration: BoxDecoration(
-            color: Bk.glassDefault,
-            shape: BoxShape.circle,
-            border: Border.all(color: Bk.glassBorder, width: 1),
+          child: Stack(
+            children: [
+              Container(
+                width: size, height: size,
+                decoration: BoxDecoration(
+                  color: Bk.glassDefault,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Bk.glassBorder, width: 1),
+                ),
+                child: Icon(icon, size: size * 0.48, color: Bk.textPri),
+              ),
+              Positioned.fill(
+                child: LiquidGlassSheen(
+                  borderRadius: BorderRadius.circular(size / 2),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
           ),
-          child: Icon(icon, size: size * 0.48, color: Bk.textPri),
         ),
       ),
     );

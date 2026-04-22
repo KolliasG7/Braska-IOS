@@ -13,6 +13,7 @@ class Bk {
   static const bgBottom = Color(0xFF05060F);
   static const bgOrbA   = Color(0xFF4F46E5); // top-left halo
   static const bgOrbB   = Color(0xFFF472B6); // bottom-right halo
+  static const bgOrbC   = Color(0xFF22D3EE); // mid-right cyan halo
 
   // Aliases kept for legacy code paths during the migration.
   static const oled        = bgBottom;

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/motion.dart';
+import 'glass.dart';
 import 'tokens.dart';
 
 /// Shared background used under every screen. Stack content on top and make
@@ -25,14 +26,24 @@ class AppBackground extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Soft colored halos so glass cards have something to refract.
+          // Colored halos so glass surfaces have something to refract.
+          // Opacities are tuned so frosted panels read as translucent-
+          // coloured rather than flat grey.
           const Positioned(
             top: -120, left: -100,
-            child: _Orb(color: Bk.bgOrbA, size: 320, opacity: 0.18),
+            child: _Orb(color: Bk.bgOrbA, size: 360, opacity: 0.34),
+          ),
+          const Positioned(
+            top: 160, right: -140,
+            child: _Orb(color: Bk.bgOrbC, size: 320, opacity: 0.22),
           ),
           const Positioned(
             bottom: -140, right: -120,
-            child: _Orb(color: Bk.bgOrbB, size: 360, opacity: 0.12),
+            child: _Orb(color: Bk.bgOrbB, size: 400, opacity: 0.28),
+          ),
+          const Positioned(
+            bottom: 60, left: -160,
+            child: _Orb(color: Bk.bgOrbA, size: 340, opacity: 0.18),
           ),
           child,
         ],
@@ -86,22 +97,28 @@ class GlassBottomNav extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xs),
-      child: ClipRRect(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x66000000),
+              blurRadius: 28,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.pill),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-          child: Container(
+          filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+          child: Stack(
+            children: [
+              Container(
             decoration: BoxDecoration(
               color: Bk.glassRaised,
               borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(color: Bk.glassBorderHi, width: 1),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x66000000),
-                  blurRadius: 24,
-                  offset: Offset(0, 8),
-                ),
-              ],
             ),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: LayoutBuilder(builder: (context, constraints) {
@@ -161,7 +178,16 @@ class GlassBottomNav extends StatelessWidget {
                 ],
               );
             }),
+              ),
+              Positioned.fill(
+                child: LiquidGlassSheen(
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                  intensity: 1.2,
+                ),
+              ),
+            ],
           ),
+        ),
         ),
       ),
     );
