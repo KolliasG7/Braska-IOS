@@ -273,6 +273,16 @@ class ConnectionProvider extends ChangeNotifier {
       newPassword: newPassword,
     );
     await _saveToken(t);
+    // ApiService.rotatePassword already updated its own .token on the
+    // success path; re-assign here for defensiveness in case that ever
+    // changes. WsService.token is the important one: it's a mutable
+    // field read on every reconnect attempt, and the backend invalidates
+    // the old token the moment the rotation persists. Without this line,
+    // the next socket drop (Wi-Fi hiccup, background, etc.) would try
+    // to re-auth with the stale token and fail 401, silently breaking
+    // the telemetry stream even though the user saw a success toast.
+    _api!.token = t;
+    _ws?.token = t;
     notifyListeners();
   }
 
