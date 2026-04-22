@@ -1,0 +1,38 @@
+name: braska
+description: Strawberry Manager — PS4 Linux control panel by rmux
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.1
+  web_socket_channel: ^3.0.1
+  shared_preferences: ^2.2.3
+  fl_chart: ^0.68.0
+  flutter_local_notifications: ^17.2.2
+  provider: ^6.1.2
+  material_symbols_icons: ^4.2760.0
+  file_picker: ^10.3.10
+  path_provider: ^2.1.4
+  open_file: ^3.3.2
+  package_info_plus: ^8.0.0
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.14.0
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter_launcher_icons:
+  ios: true
+  android: false
+  image_path: "assets/logo.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.png
