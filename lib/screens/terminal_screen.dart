@@ -19,7 +19,7 @@ class TerminalScreen extends StatefulWidget {
 
 class _TerminalScreenState extends State<TerminalScreen>
     with WidgetsBindingObserver {
-  late TerminalService _term;
+  TerminalService? _term;
   final _inputCtrl  = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _inputFocus = FocusNode();
@@ -27,14 +27,15 @@ class _TerminalScreenState extends State<TerminalScreen>
   StreamSubscription? _outSub;
   StreamSubscription? _stateSub;
   bool _connected = false;
+  bool _initFailed = false;
   String _partial = '';
 
   /// Send a raw byte sequence to the pty and keep focus on the input so
   /// the iOS soft keyboard stays up while the user chains accessory keys.
   void _sendRaw(String bytes) {
-    if (!_connected) return;
+    if (!_connected || _term == null) return;
     HapticFeedback.selectionClick();
-    _term.sendInput(bytes);
+    _term!.sendInput(bytes);
     if (!_inputFocus.hasFocus) _inputFocus.requestFocus();
   }
 
@@ -43,12 +44,16 @@ class _TerminalScreenState extends State<TerminalScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final cp = context.read<ConnectionProvider>();
+    if (cp.api == null) {
+      _initFailed = true;
+      return;
+    }
     _term = TerminalService(cp.api!.baseUrl, token: cp.token);
-    _outSub   = _term.output.listen(_onOutput);
-    _stateSub = _term.state.listen((s) {
+    _outSub   = _term!.output.listen(_onOutput);
+    _stateSub = _term!.state.listen((s) {
       if (mounted) setState(() => _connected = s == TermState.connected);
     });
-    _term.connect();
+    _term!.connect();
   }
 
   void _onOutput(String text) {
@@ -96,6 +101,10 @@ class _TerminalScreenState extends State<TerminalScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_initFailed) {
+      return _ConnectionError(embedded: widget.embedded);
+    }
+
     final body = Column(children: [
       _Header(
         connected: _connected,
@@ -159,8 +168,8 @@ class _TerminalScreenState extends State<TerminalScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      if (_term.currentState != TermState.connected) {
-        _term.connect();
+      if (_term != null && _term!.currentState != TermState.connected) {
+        _term!.connect();
       }
     }
   }
@@ -170,7 +179,7 @@ class _TerminalScreenState extends State<TerminalScreen>
     WidgetsBinding.instance.removeObserver(this);
     _outSub?.cancel();
     _stateSub?.cancel();
-    _term.dispose();
+    _term?.dispose();
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     _inputFocus.dispose();
@@ -203,6 +212,53 @@ class _IdlePrompt extends StatelessWidget {
                 : 'connecting…',
             style: T.mono.copyWith(
               color: Bk.textSec.withOpacity(0.55),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConnectionError extends StatelessWidget {
+  const _ConnectionError({required this.embedded});
+  final bool embedded;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = Column(children: [
+      _Header(
+        connected: false,
+        onClear: () {},
+        embedded: embedded,
+      ),
+      const Expanded(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+          child: GlassCard(
+            padding: EdgeInsets.all(AppSpacing.md),
+            child: Center(
+              child: Text(
+                'Unable to connect: API not available',
+                style: TextStyle(color: Bk.danger, fontSize: 14),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ]);
+
+    if (embedded) return body;
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(child: body),
+      ),
+    );
+  }
+}
               fontStyle: FontStyle.italic,
             ),
           ),

@@ -56,7 +56,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       0 => _MonitorTab(frame: frame, api: cp.api),
       1 => _ControlTab(frame: frame, api: cp.api),
       2 => const TerminalScreen(embedded: true),
-      _ => FilesScreen(api: cp.api!, embedded: true),
+      _ => cp.api != null
+          ? FilesScreen(api: cp.api!, embedded: true)
+          : const _Wait(),
     };
   }
 
