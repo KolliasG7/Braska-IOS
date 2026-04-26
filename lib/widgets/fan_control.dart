@@ -12,7 +12,7 @@ class FanControlCard extends StatefulWidget {
 }
 
 class _FanControlCardState extends State<FanControlCard> {
-  static const _min = -10, _max = 80.0;
+  static const _min = -10.0, _max = 80.0;
   late double _val;
   double? _lastCommittedValue;
   bool _writing = false;
