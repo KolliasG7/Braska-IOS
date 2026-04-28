@@ -33,11 +33,7 @@ struct DashboardView: View {
                     .navigationTitle("Monitor")
                     .navigationBarTitleDisplayMode(.large)
                     .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button(action: { showingSettings = true }) {
-                                Image(systemName: "gearshape")
-                            }
-                        }
+                        settingsToolbarItem
                     }
             }
             .tabItem {
@@ -88,6 +84,15 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
+        }
+    }
+    
+    @ToolbarContentBuilder
+    private var settingsToolbarItem: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button(action: { showingSettings = true }) {
+                Image(systemName: "gearshape")
+            }
         }
     }
 }

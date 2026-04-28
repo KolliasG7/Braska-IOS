@@ -77,7 +77,9 @@ class ProcessesViewModel: ObservableObject {
     
     private func startAutoRefresh() {
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-            self?.loadProcesses()
+            Task { @MainActor in
+                self?.loadProcesses()
+            }
         }
     }
     
@@ -87,6 +89,7 @@ class ProcessesViewModel: ObservableObject {
     }
     
     deinit {
-        stopAutoRefresh()
+        refreshTimer?.invalidate()
+        refreshTimer = nil
     }
 }

@@ -37,7 +37,7 @@ class ControlViewModel: ObservableObject {
         
         // Load LED profiles
         apiService.getLEDProfiles()
-            .sink { [weak self] completion in
+            .sink { completion in
                 if case .failure(let error) = completion {
                     print("[ControlViewModel] Failed to load LED profiles: \(error)")
                 }
