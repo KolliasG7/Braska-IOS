@@ -188,6 +188,9 @@ class ConnectionProvider extends ChangeNotifier {
   }
 
   void _onFrame(TelemetryFrame f) {
+    // Don't process frames if we're being torn down
+    if (_ws == null) return;
+    
     _frame = f;
     _connState = ConnState.connected;
     if (f.cpu != null) { cpuHistory.add(f.cpu!.percent); if (cpuHistory.length > 50) cpuHistory.removeAt(0); }

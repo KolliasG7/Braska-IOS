@@ -1,4 +1,5 @@
 // lib/services/notification_service.dart
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,13 +10,20 @@ class NotificationService {
   static bool _ready = false;
 
   static Future<void> init() async {
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const ios     = DarwinInitializationSettings();
-    const linux   = LinuxInitializationSettings(defaultActionName: 'Open');
-    await _plugin.initialize(
-      const InitializationSettings(android: android, iOS: ios, linux: linux),
-    );
-    _ready = true;
+    try {
+      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const ios     = DarwinInitializationSettings();
+      const linux   = LinuxInitializationSettings(defaultActionName: 'Open');
+      await _plugin.initialize(
+        const InitializationSettings(android: android, iOS: ios, linux: linux),
+      );
+      _ready = true;
+    } catch (e) {
+      // Notification service failed to initialize - app can still function
+      // but notifications will be disabled
+      _ready = false;
+      debugPrint('[NotificationService] Failed to initialize: $e');
+    }
   }
 
   static Future<void> showStatus({

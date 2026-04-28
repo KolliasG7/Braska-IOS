@@ -173,6 +173,10 @@ class ApiService {
   }
 
   Future<int> setFanThreshold(int c) async {
+    // Validate threshold is within acceptable range
+    if (c < -10 || c > 80) {
+      throw ApiException(400, 'Fan threshold must be between -10°C and 80°C');
+    }
     return _retry.execute(
       () async {
         final r = await http.post(_u('/api/fan/threshold'),
@@ -343,6 +347,17 @@ class ApiService {
     required String filename,
     required String destDir,
   }) async {
+    // Validate inputs to prevent path traversal attacks
+    if (filename.isEmpty || filename.contains('..') || filename.contains('\x00')) {
+      throw ApiException(400, 'Invalid filename');
+    }
+    if (destDir.isEmpty || destDir.contains('\x00')) {
+      throw ApiException(400, 'Invalid destination directory');
+    }
+    if (bytes.isEmpty) {
+      throw ApiException(400, 'Cannot upload empty file');
+    }
+    
     return _retry.execute(
       () async {
         // The daemon's upload handler expects the full target path
@@ -372,6 +387,11 @@ class ApiService {
   }
 
   Future<void> deleteFile(String path) async {
+    // Validate path to prevent deleting critical system files
+    if (path.isEmpty || path.contains('\x00')) {
+      throw ApiException(400, 'Invalid file path');
+    }
+    
     return _retry.execute(
       () async {
         final encoded = Uri.encodeQueryComponent(path);

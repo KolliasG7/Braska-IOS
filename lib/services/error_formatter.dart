@@ -7,6 +7,11 @@ class ErrorFormatter {
       if (error.statusCode == 403) return 'Permission denied for this action.';
       if (error.statusCode == 404) return 'Requested resource was not found.';
       if (error.statusCode == 408) return 'Request timed out. Please try again.';
+      if (error.statusCode == 409) return 'Conflict detected. Please refresh and retry.';
+      if (error.statusCode == 429) return 'Too many requests. Please wait a moment.';
+      if (error.statusCode == 502) return 'Bad gateway. Server may be restarting.';
+      if (error.statusCode == 503) return 'Service unavailable. Please try again shortly.';
+      if (error.statusCode == 504) return 'Gateway timeout. Please check your connection.';
       if (error.statusCode >= 500) return 'Server error. Please try again shortly.';
       return error.message.isNotEmpty ? error.message : 'Request failed.';
     }
