@@ -1,27 +1,33 @@
 // DashboardView.swift
-// Main dashboard with tab navigation - Updated with real monitoring
+// Main dashboard with full tab navigation
 
 import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var connectionViewModel: ConnectionViewModel
     @StateObject private var dashboardViewModel: DashboardViewModel
-    @State private var selectedTab = 0
+    @StateObject private var controlViewModel: ControlViewModel
+    @StateObject private var filesViewModel: FilesViewModel
+    @StateObject private var processesViewModel: ProcessesViewModel
     
-    init() {
-        // Initialize with connection details from environment
-        // Note: In real usage, this will be properly injected
-        let mockAPI = APIService(baseURL: URL(string: "http://localhost")!, token: "")
-        let mockURL = URL(string: "http://localhost")!
+    @State private var selectedTab = 0
+    @State private var showingSettings = false
+    
+    // Initialize all view models with proper dependencies
+    init(apiService: APIService, baseURL: URL, token: String) {
         _dashboardViewModel = StateObject(wrappedValue: DashboardViewModel(
-            apiService: mockAPI,
-            baseURL: mockURL,
-            token: ""
+            apiService: apiService,
+            baseURL: baseURL,
+            token: token
         ))
+        _controlViewModel = StateObject(wrappedValue: ControlViewModel(apiService: apiService))
+        _filesViewModel = StateObject(wrappedValue: FilesViewModel(apiService: apiService))
+        _processesViewModel = StateObject(wrappedValue: ProcessesViewModel(apiService: apiService))
     }
     
     var body: some View {
         TabView(selection: $selectedTab) {
+            // Monitor Tab
             NavigationStack {
                 MonitorTab(viewModel: dashboardViewModel)
                     .navigationTitle("Monitor")
@@ -29,7 +35,7 @@ struct DashboardView: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button {
-                                // Settings action
+                                showingSettings = true
                             } label: {
                                 Image(systemName: "gearshape")
                             }
@@ -41,89 +47,59 @@ struct DashboardView: View {
             }
             .tag(0)
             
-            ControlTabPlaceholder()
-                .tabItem {
-                    Label("Control", systemImage: "slider.horizontal.3")
-                }
-                .tag(1)
+            // Control Tab
+            NavigationStack {
+                ControlTab(viewModel: controlViewModel)
+                    .navigationTitle("Control")
+                    .navigationBarTitleDisplayMode(.large)
+            }
+            .tabItem {
+                Label("Control", systemImage: "slider.horizontal.3")
+            }
+            .tag(1)
             
-            TerminalPlaceholder()
-                .tabItem {
-                    Label("Terminal", systemImage: "terminal")
-                }
-                .tag(2)
+            // Terminal Tab
+            NavigationStack {
+                TerminalView(
+                    baseURL: dashboardViewModel.apiService.baseURL,
+                    token: connectionViewModel.token
+                )
+            }
+            .tabItem {
+                Label("Terminal", systemImage: "terminal")
+            }
+            .tag(2)
             
-            FilesPlaceholder()
-                .tabItem {
-                    Label("Files", systemImage: "folder")
-                }
-                .tag(3)
-        }
-    }
-}
-
-// Placeholder views - to be implemented in later phases
-struct ControlTabPlaceholder: View {
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.secondary)
-                
-                Text("Control Tab")
-                    .font(.title2.weight(.semibold))
-                
-                Text("Phase 3: Fan/LED controls")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            // Files Tab
+            NavigationStack {
+                FilesView(viewModel: filesViewModel)
             }
-            .navigationTitle("Control")
-        }
-    }
-}
-
-struct TerminalPlaceholder: View {
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                Image(systemName: "terminal")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.secondary)
-                
-                Text("Terminal")
-                    .font(.title2.weight(.semibold))
-                
-                Text("Phase 4: Interactive terminal")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            .tabItem {
+                Label("Files", systemImage: "folder")
             }
-            .navigationTitle("Terminal")
-        }
-    }
-}
-
-struct FilesPlaceholder: View {
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                Image(systemName: "folder")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.secondary)
-                
-                Text("Files")
-                    .font(.title2.weight(.semibold))
-                
-                Text("Phase 5: File manager")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            .tag(3)
+            
+            // Processes Tab
+            NavigationStack {
+                ProcessesView(viewModel: processesViewModel)
             }
-            .navigationTitle("Files")
+            .tabItem {
+                Label("Processes", systemImage: "list.bullet")
+            }
+            .tag(4)
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
         }
     }
 }
 
 #Preview {
-    DashboardView()
-        .environmentObject(ConnectionViewModel())
+    let mockAPI = APIService(baseURL: URL(string: "http://localhost")!, token: "")
+    DashboardView(
+        apiService: mockAPI,
+        baseURL: URL(string: "http://localhost")!,
+        token: ""
+    )
+    .environmentObject(ConnectionViewModel())
 }

@@ -1,5 +1,5 @@
 // ConnectionViewModel.swift
-// Manages connection state and authentication
+// Manages connection state and authentication - Updated
 
 import Foundation
 import Combine
@@ -9,8 +9,11 @@ class ConnectionViewModel: ObservableObject {
     @Published var state: ConnectionState = .idle
     @Published var serverAddress: String = ""
     @Published var isTunnel: Bool = false
+    @Published var token: String = ""
     
-    private var apiService: APIService?
+    private(set) var apiService: APIService?
+    var api: APIService? { apiService }
+    
     private var cancellables = Set<AnyCancellable>()
     private let storageService = StorageService.shared
     
@@ -22,6 +25,7 @@ class ConnectionViewModel: ObservableObject {
         if let savedAddress = storageService.serverAddress {
             serverAddress = savedAddress
             isTunnel = storageService.isTunnel
+            token = storageService.authToken ?? ""
             
             // Auto-connect if we have a saved address
             if !savedAddress.isEmpty {
@@ -42,8 +46,8 @@ class ConnectionViewModel: ObservableObject {
             return
         }
         
-        let token = storageService.authToken ?? ""
-        apiService = APIService(baseURL: url, token: token)
+        let savedToken = storageService.authToken ?? ""
+        apiService = APIService(baseURL: url, token: savedToken)
         
         apiService?.getHealth()
             .sink { [weak self] completion in
@@ -72,9 +76,10 @@ class ConnectionViewModel: ObservableObject {
                 if case .failure(let error) = completion {
                     self?.state = .error(error.localizedDescription)
                 }
-            } receiveValue: { [weak self] token in
-                self?.storageService.authToken = token
-                self?.apiService?.updateToken(token)
+            } receiveValue: { [weak self] newToken in
+                self?.token = newToken
+                self?.storageService.authToken = newToken
+                self?.apiService?.updateToken(newToken)
                 self?.completeConnection()
             }
             .store(in: &cancellables)
@@ -89,6 +94,12 @@ class ConnectionViewModel: ObservableObject {
         disconnect()
         storageService.clearAll()
         serverAddress = ""
+        token = ""
+    }
+    
+    func clearToken() {
+        storageService.authToken = nil
+        token = ""
     }
     
     // MARK: - Private Methods

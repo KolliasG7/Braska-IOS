@@ -1,5 +1,5 @@
 // ContentView.swift
-// Root navigation controller
+// Root navigation controller - Updated with proper dependency injection
 
 import SwiftUI
 
@@ -12,7 +12,18 @@ struct ContentView: View {
             case .idle, .connecting, .error, .needsAuth:
                 ConnectView()
             case .connected:
-                DashboardView()
+                // Create dashboard with proper API service initialization
+                if let api = connectionViewModel.api,
+                   let baseURL = URL(string: connectionViewModel.serverAddress) {
+                    DashboardView(
+                        apiService: api,
+                        baseURL: baseURL,
+                        token: connectionViewModel.token
+                    )
+                } else {
+                    // Fallback to connect screen if API not initialized
+                    ConnectView()
+                }
             }
         }
         .animation(.easeInOut, value: connectionViewModel.state)
