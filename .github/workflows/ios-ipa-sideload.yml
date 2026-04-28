@@ -16,46 +16,81 @@ on:
 jobs:
   build-ipa:
     name: Build Sideloadable IPA
-    runs-on: macos-13
+    runs-on: macos-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
     - name: Setup Xcode
-      uses: maxim-lobanov/setup-xcode@v1
-      with:
-        xcode-version: '15.2'
-    
-    - name: Verify Xcode version
       run: |
         xcodebuild -version
         swift --version
+        which xcodebuild
     
-    - name: Install XcodeGen and tools
+    - name: Install build tools
       run: |
-        brew install xcodegen@2.38.0 || brew install xcodegen
-        brew install ldid
+        brew install xcodegen ldid
+        xcodegen --version
     
-    - name: Generate Xcode Project
+    - name: Prepare build environment
       working-directory: StrawberryManager-iOS
       run: |
-        echo "🔨 Generating Xcode project with XcodeGen..."
-        xcodegen generate
-        echo "✅ Xcode project generated"
-        ls -la *.xcodeproj
+        echo "📁 Preparing build environment..."
+        
+        # Create Assets catalog
+        mkdir -p Assets.xcassets/AppIcon.appiconset
+        cat > Assets.xcassets/AppIcon.appiconset/Contents.json << 'JSON'
+        {
+          "images" : [
+            {
+              "idiom" : "universal",
+              "platform" : "ios",
+              "size" : "1024x1024"
+            }
+          ],
+          "info" : {
+            "author" : "xcode",
+            "version" : 1
+          }
+        }
+        JSON
+        
+        echo "✅ Assets catalog created"
     
-    - name: Verify project structure
+    - name: Generate Xcode Project with compatibility
       working-directory: StrawberryManager-iOS
       run: |
-        echo "📁 Checking project structure..."
-        xcodebuild -list -project StrawberryManager.xcodeproj
+        echo "🔨 Generating Xcode project..."
+        
+        # Generate with XcodeGen
+        xcodegen generate --spec project.yml
+        
+        # Check if project was created
+        if [ ! -d "StrawberryManager.xcodeproj" ]; then
+          echo "❌ Project generation failed"
+          exit 1
+        fi
+        
+        echo "✅ Xcode project generated successfully"
+        ls -la StrawberryManager.xcodeproj/
     
-    - name: Build for iOS Device
+    - name: List available schemes
       working-directory: StrawberryManager-iOS
       run: |
-        echo "🏗️  Building for iOS device..."
-        xcodebuild clean archive \
+        echo "📋 Available build schemes:"
+        xcodebuild -list -project StrawberryManager.xcodeproj 2>&1 || true
+        echo ""
+        echo "📋 Available destinations:"
+        xcodebuild -showdestinations -project StrawberryManager.xcodeproj -scheme StrawberryManager 2>&1 | grep "platform:iOS" | head -10 || true
+    
+    - name: Build for iOS
+      working-directory: StrawberryManager-iOS
+      run: |
+        echo "🏗️  Building iOS app..."
+        
+        set -x
+        xcodebuild archive \
           -project StrawberryManager.xcodeproj \
           -scheme StrawberryManager \
           -configuration Release \
@@ -65,210 +100,224 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          DEVELOPMENT_TEAM="" | xcbeautify || xcodebuild clean archive \
-          -project StrawberryManager.xcodeproj \
-          -scheme StrawberryManager \
-          -configuration Release \
-          -archivePath ../build/StrawberryManager.xcarchive \
-          -destination 'generic/platform=iOS' \
-          -allowProvisioningUpdates \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO \
-          DEVELOPMENT_TEAM=""
+          DEVELOPMENT_TEAM="" \
+          ENABLE_BITCODE=NO \
+          COMPILER_INDEX_STORE_ENABLE=NO
+        set +x
+        
+        echo "✅ Build completed"
+        ls -la ../build/StrawberryManager.xcarchive/
+    
+    - name: Verify app bundle
+      run: |
+        echo "🔍 Verifying app bundle..."
+        APP_PATH="build/StrawberryManager.xcarchive/Products/Applications/StrawberryManager.app"
+        
+        if [ ! -d "$APP_PATH" ]; then
+          echo "❌ App bundle not found at $APP_PATH"
+          echo "📂 Contents of archive:"
+          find build/StrawberryManager.xcarchive -type d -maxdepth 3
+          exit 1
+        fi
+        
+        echo "✅ App bundle found"
+        ls -lh "$APP_PATH"
+        
+        # Check for executable
+        if [ -f "$APP_PATH/StrawberryManager" ]; then
+          echo "✅ Executable found"
+          file "$APP_PATH/StrawberryManager"
+        else
+          echo "❌ Executable not found"
+          ls -la "$APP_PATH/"
+          exit 1
+        fi
     
     - name: Create unsigned IPA
       run: |
         echo "📦 Creating unsigned IPA..."
         mkdir -p Payload
         
-        # Copy .app to Payload
         cp -r build/StrawberryManager.xcarchive/Products/Applications/StrawberryManager.app Payload/
         
-        # Create IPA (it's just a zip)
-        zip -r StrawberryManager-unsigned.ipa Payload
+        zip -qr StrawberryManager-unsigned.ipa Payload
         
         echo "✅ Unsigned IPA created"
         ls -lh StrawberryManager-unsigned.ipa
+        unzip -l StrawberryManager-unsigned.ipa | head -20
     
-    - name: Sign with ldid (for jailbroken devices)
+    - name: Create fakesigned IPA (for jailbroken devices)
       run: |
-        echo "🔐 Fakesigning with ldid..."
-        
-        # Create copy for signing
+        echo "🔐 Creating fakesigned IPA with ldid..."
         mkdir -p Payload-signed
+        
         cp -r build/StrawberryManager.xcarchive/Products/Applications/StrawberryManager.app Payload-signed/
         
-        # Fakesign with ldid
+        # Fakesign the binary
         ldid -S Payload-signed/StrawberryManager.app/StrawberryManager
         
-        # Create signed IPA
-        zip -r StrawberryManager-fakesigned.ipa Payload-signed
+        zip -qr StrawberryManager-fakesigned.ipa Payload-signed
         
         echo "✅ Fakesigned IPA created"
         ls -lh StrawberryManager-fakesigned.ipa
     
-    - name: Create sideload instructions
+    - name: Create installation guide
       run: |
-        cat > SIDELOAD_INSTRUCTIONS.txt << 'EOF'
-        📱 Strawberry Manager iOS - Sideloading Guide
-        ═══════════════════════════════════════════
+        cat > SIDELOAD_INSTRUCTIONS.txt << 'INSTRUCTIONS'
+        📱 Strawberry Manager iOS - Installation Guide
+        ═══════════════════════════════════════════════
         
-        You have TWO IPA files:
+        ✅ BUILD SUCCESSFUL! You now have 2 IPA files.
         
-        1️⃣  StrawberryManager-unsigned.ipa
-           ✅ For regular iPhones (non-jailbroken)
-           ✅ Use with AltStore or Sideloadly
-           ⏱️  Valid 7 days, then re-sign (1-minute process)
+        ═══════════════════════════════════════════════
+        📦 FILES INCLUDED:
+        ═══════════════════════════════════════════════
         
-        2️⃣  StrawberryManager-fakesigned.ipa  
-           ✅ For jailbroken iPhones ONLY
-           ✅ Install directly with Filza
-           ⏱️  Permanent installation
+        1. StrawberryManager-unsigned.ipa
+           → For normal iPhones (non-jailbroken)
+           → Use with AltStore or Sideloadly
+           → Valid for 7 days, then quick re-sign
         
-        ═══════════════════════════════════════════
-        🌟 RECOMMENDED: AltStore (FREE, EASY)
-        ═══════════════════════════════════════════
+        2. StrawberryManager-fakesigned.ipa
+           → For jailbroken iPhones only
+           → Install with Filza File Manager
+           → Permanent installation
         
-        Windows or Mac (No Apple Developer account needed!)
+        ═══════════════════════════════════════════════
+        🌟 EASIEST METHOD: AltStore (FREE)
+        ═══════════════════════════════════════════════
         
-        1. Download AltStore from: https://altstore.io/
+        No Apple Developer account needed!
         
-        2. Install AltServer on your computer
+        Step 1: Download AltStore
+          → Visit: https://altstore.io/
+          → Download for Windows or Mac
         
-        3. Connect iPhone via USB cable
+        Step 2: Install AltServer
+          → Run the installer
+          → AltServer runs in system tray
         
-        4. Follow AltStore setup wizard
+        Step 3: Install AltStore on iPhone
+          → Connect iPhone via USB
+          → Click AltServer icon → Install AltStore
+          → Enter Apple ID when prompted
+          → Trust in Settings → General → Device Management
         
-        5. Open AltStore app on iPhone
+        Step 4: Sideload the App
+          → Open AltStore on iPhone
+          → Tap "My Apps" tab
+          → Tap "+" button
+          → Select: StrawberryManager-unsigned.ipa
+          → Wait 1-2 minutes
+          → Done! App appears on home screen
         
-        6. Tap "My Apps" → "+" button
+        Step 5: Auto-Refresh Setup (Optional)
+          → Keep AltServer running on PC
+          → iPhone and PC on same Wi-Fi
+          → AltStore refreshes apps automatically
         
-        7. Select: StrawberryManager-unsigned.ipa
+        ═══════════════════════════════════════════════
+        📲 ALTERNATIVE: Sideloadly
+        ═══════════════════════════════════════════════
         
-        8. Sign in with FREE Apple ID (no paid account!)
+        Step 1: Download Sideloadly
+          → Visit: https://sideloadly.io/
         
-        9. Wait 1-2 minutes for installation
+        Step 2: Connect and Sideload
+          → Connect iPhone via USB
+          → Drag StrawberryManager-unsigned.ipa to Sideloadly
+          → Enter Apple ID (free works!)
+          → Click "Start"
+          → Wait for installation
         
-        10. Done! App appears on home screen
+        FREE Apple ID = 7 days validity
+        PAID Developer ($99/year) = 1 year validity
         
-        📝 Notes:
-        - Apps expire after 7 days
-        - AltStore auto-refreshes when on same Wi-Fi
-        - Or manually refresh in AltStore app
-        - Takes ~30 seconds to refresh
+        ═══════════════════════════════════════════════
+        🔓 FOR JAILBROKEN IPHONES:
+        ═══════════════════════════════════════════════
         
-        ═══════════════════════════════════════════
-        📲 OPTION 2: Sideloadly
-        ═══════════════════════════════════════════
+        Much simpler - no computer needed!
         
-        Windows or Mac
+        Step 1: Download IPA on iPhone
+          → Use Safari to download StrawberryManager-fakesigned.ipa
         
-        1. Download from: https://sideloadly.io/
-        
-        2. Connect iPhone via USB
-        
-        3. Drag StrawberryManager-unsigned.ipa into Sideloadly
-        
-        4. Enter Apple ID (free or paid)
-        
-        5. Click "Start"
-        
-        6. Wait for installation
-        
-        FREE Apple ID: 7-day validity
-        PAID Developer ($99/year): 1-year validity
-        
-        ═══════════════════════════════════════════
-        🔓 OPTION 3: Jailbroken iPhone
-        ═══════════════════════════════════════════
-        
-        No computer needed!
-        
-        1. Download StrawberryManager-fakesigned.ipa on iPhone
-        
-        2. Open in Filza File Manager
-        
-        3. Tap IPA file → Installer → Install
-        
-        4. Done! Permanent installation ✅
+        Step 2: Install
+          → Open in Filza File Manager
+          → Tap IPA → Installer → Install
+          → Respring if needed
+          → Done! Permanent installation ✅
         
         Requirements:
-        - Jailbroken iPhone (checkra1n, unc0ver, etc.)
-        - Filza or similar file manager
-        - AppSync Unified installed
+          → Jailbroken iPhone (checkra1n, unc0ver, Dopamine, etc.)
+          → AppSync Unified installed
+          → Filza or similar file manager
         
-        ═══════════════════════════════════════════
-        ⚙️  OPTION 4: iOS App Signer (Mac)
-        ═══════════════════════════════════════════
-        
-        If you have Mac access:
-        
-        1. Download iOS App Signer
-        
-        2. Open StrawberryManager-unsigned.ipa
-        
-        3. Select your signing certificate
-        
-        4. Click "Start"
-        
-        5. Install resulting IPA with Xcode or Configurator
-        
-        ═══════════════════════════════════════════
+        ═══════════════════════════════════════════════
         🆘 TROUBLESHOOTING
-        ═══════════════════════════════════════════
+        ═══════════════════════════════════════════════
         
-        "Untrusted Enterprise Developer"
-        → Settings → General → VPN & Device Management
-        → Tap your Apple ID → Trust
+        Problem: "Untrusted Enterprise Developer"
+        Solution:
+          → Settings → General → VPN & Device Management
+          → Tap your Apple ID under "Developer App"
+          → Tap "Trust <Your Apple ID>"
         
-        "Unable to Install App"
-        → Delete old version first
-        → Restart iPhone
-        → Try different cable
-        → Re-download IPA
+        Problem: "Unable to Install App"
+        Solution:
+          → Delete any old version first
+          → Restart iPhone
+          → Try a different USB cable
+          → Re-download the IPA
+          → Use Sideloadly instead of AltStore (or vice versa)
         
-        "App Crashes Immediately"
-        → Check iOS version (need 17.0+)
-        → Re-sign with fresh certificate
-        → Check Settings → Privacy for any restrictions
+        Problem: "App Crashes on Launch"
+        Solution:
+          → Ensure iOS 17.0 or newer
+          → Re-sign with fresh certificate
+          → Try fakesigned version if jailbroken
         
-        AltStore "Could not find AltServer"
-        → Ensure iPhone and PC on same Wi-Fi
-        → Disable firewall temporarily
-        → Restart AltServer
+        Problem: AltStore says "Could not find AltServer"
+        Solution:
+          → Ensure iPhone and PC on same Wi-Fi network
+          → Disable VPN temporarily
+          → Disable firewall temporarily
+          → Restart AltServer application
+          → Check AltServer is running (system tray icon)
         
-        ═══════════════════════════════════════════
-        📱 REQUIREMENTS
-        ═══════════════════════════════════════════
-        
-        - iOS 17.0 or higher
-        - ~30 MB free space
-        - Internet connection (to connect to PS4)
-        
-        ═══════════════════════════════════════════
+        ═══════════════════════════════════════════════
         💰 COST COMPARISON
-        ═══════════════════════════════════════════
+        ═══════════════════════════════════════════════
         
-        AltStore:           FREE (7-day re-sign)
-        Sideloadly:         FREE (7-day re-sign)
-        Jailbreak Method:   FREE (permanent)
-        Apple Developer:    $99/year (1-year validity)
+        AltStore (free):        FREE (refresh every 7 days)
+        Sideloadly (free):      FREE (refresh every 7 days)
+        Jailbreak method:       FREE (permanent install)
+        Apple Developer:        $99/year (refresh yearly)
         
-        ═══════════════════════════════════════════
+        ═══════════════════════════════════════════════
+        📱 REQUIREMENTS
+        ═══════════════════════════════════════════════
         
-        For official App Store distribution (no sideloading needed):
-        - Requires Apple Developer account
-        - Add certificates to GitHub Secrets
-        - See AUTOMATION_GUIDE.md
+        iPhone Requirements:
+          ✓ iOS 17.0 or higher
+          ✓ ~30 MB free storage
+          ✓ Wi-Fi or cellular connection
         
-        Questions? See README.md files or GitHub Issues
-        ═══════════════════════════════════════════
-        EOF
+        Computer Requirements (for sideloading):
+          ✓ Windows 10/11 or macOS 10.15+
+          ✓ iTunes installed (Windows) or Finder (Mac)
+          ✓ USB cable
         
-        echo "✅ Instructions created"
+        ═══════════════════════════════════════════════
+        
+        Questions? Check the GitHub repository README or create an issue!
+        
+        Repository: https://github.com/KolliasG7/Strawberry-Manager---Reworked
+        INSTRUCTIONS
+        
+        echo "✅ Instructions file created"
     
-    - name: Upload IPAs and Instructions
+    - name: Upload IPA files
       uses: actions/upload-artifact@v4
       with:
         name: ios-ipa-files
@@ -281,20 +330,25 @@ jobs:
     - name: Build Summary
       run: |
         echo ""
-        echo "════════════════════════════════════════════"
-        echo "✅ iOS IPA BUILD COMPLETE!"
-        echo "════════════════════════════════════════════"
+        echo "════════════════════════════════════════════════════"
+        echo "✅  iOS IPA BUILD SUCCESSFUL!"
+        echo "════════════════════════════════════════════════════"
         echo ""
-        echo "📦 Files created:"
-        ls -lh *.ipa
+        echo "📦 Created files:"
+        ls -lh *.ipa SIDELOAD_INSTRUCTIONS.txt
         echo ""
-        echo "📥 Download from: Actions → Artifacts → ios-ipa-files"
+        echo "📥 Download from:"
+        echo "   Actions → this workflow run → Artifacts → ios-ipa-files"
         echo ""
-        echo "🎯 Quick Start:"
-        echo "1. Download ios-ipa-files.zip"
-        echo "2. Install AltStore from https://altstore.io/"
-        echo "3. Sideload StrawberryManager-unsigned.ipa"
-        echo "4. No paid Apple Developer account needed!"
+        echo "📱 Install on iPhone:"
+        echo "   1. Download ios-ipa-files.zip and unzip"
+        echo "   2. Install AltStore from https://altstore.io/"
+        echo "   3. Sideload StrawberryManager-unsigned.ipa"
+        echo "   4. Use your FREE Apple ID (no paid account needed)"
         echo ""
-        echo "📖 See SIDELOAD_INSTRUCTIONS.txt for all methods"
-        echo "════════════════════════════════════════════"
+        echo "🔓 For jailbroken iPhones:"
+        echo "   → Use StrawberryManager-fakesigned.ipa"
+        echo "   → Install with Filza (permanent!)"
+        echo ""
+        echo "📖 Full instructions in SIDELOAD_INSTRUCTIONS.txt"
+        echo "════════════════════════════════════════════════════"
