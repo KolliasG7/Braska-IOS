@@ -32,20 +32,20 @@ class ProcessesViewModel: ObservableObject {
     
     init(apiService: APIService) {
         self.apiService = apiService
-        loadProcesses()
+        Task { @MainActor in
+            self.loadProcesses()
+        }
     }
     
-    func loadProcesses() async {
+    func loadProcesses() {
         isLoading = true
         errorMessage = nil
         
         apiService.getProcesses(limit: 50, sortBy: sortBy.rawValue)
-            .sink { completion in
-                Task { @MainActor in
-                    self.isLoading = false
-                    if case .failure(let error) = completion {
-                        self.errorMessage = error.localizedDescription
-                    }
+            .sink { [weak self] completion in
+                self?.isLoading = false
+                if case .failure(let error) = completion {
+                    self?.errorMessage = error.localizedDescription
                 }
             } receiveValue: { [weak self] processes in
                 self?.processes = processes
@@ -53,16 +53,14 @@ class ProcessesViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func killProcess(_ process: ProcessInfo, signal: String = "SIGTERM") async {
+    func killProcess(_ process: ProcessInfo, signal: String = "SIGTERM") {
         apiService.killProcess(process.pid, signal: signal)
-            .sink { completion in
-                Task { @MainActor in
-                    if case .failure(let error) = completion {
-                        self.errorMessage = error.localizedDescription
-                    } else {
-                        // Reload after successful kill
-                        await self.loadProcesses()
-                    }
+            .sink { [weak self] completion in
+                if case .failure(let error) = completion {
+                    self?.errorMessage = error.localizedDescription
+                } else {
+                    // Reload after successful kill
+                    self?.loadProcesses()
                 }
             } receiveValue: { _ in }
             .store(in: &cancellables)
@@ -79,9 +77,7 @@ class ProcessesViewModel: ObservableObject {
     
     private func startAutoRefresh() {
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.loadProcesses()
-            }
+            self?.loadProcesses()
         }
     }
     
@@ -91,8 +87,6 @@ class ProcessesViewModel: ObservableObject {
     }
     
     deinit {
-        Task { @MainActor in
-            await stopAutoRefresh()
-        }
+        stopAutoRefresh()
     }
 }
