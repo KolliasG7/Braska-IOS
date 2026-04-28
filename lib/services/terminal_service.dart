@@ -103,12 +103,14 @@ class TerminalService {
   }
 
   void sendInput(String text) {
+    if (_disposed) return;
     try {
       _ch?.sink.add(text);
     } catch (_) {}
   }
 
   void sendResize(int cols, int rows) {
+    if (_disposed) return;
     final msg = jsonEncode({'type': 'resize', 'cols': cols, 'rows': rows});
     try {
       _ch?.sink.add(msg);

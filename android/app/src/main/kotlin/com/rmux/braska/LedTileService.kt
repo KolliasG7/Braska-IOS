@@ -34,6 +34,9 @@ class LedTileService : TileService() {
         
         updateTileUI()
 
+        // Capture the current index value to prevent race conditions in the background thread
+        val currentIdx = idx
+        
         thread {
             val urlStr = prefs.getString("flutter.ps4_addr", "") ?: ""
             val token = prefs.getString("flutter.ps4_token", "") ?: ""
@@ -53,8 +56,9 @@ class LedTileService : TileService() {
                 
                 val profilesStr = prefs.getString("flutter.ps4_led_profiles", "white,blue,red,white_pulsing,blue_pulsing,red_pulsing,green,pink,off") ?: "white,blue,red,off"
                 val leds = profilesStr.split(",").filter { it.isNotEmpty() }.toTypedArray()
-                if (idx >= leds.size) idx = 0
-                val led = leds[idx]
+                // Use captured index and ensure it's within bounds
+                val safeIdx = if (leds.isEmpty()) 0 else currentIdx.coerceIn(0, leds.size - 1)
+                val led = leds[safeIdx]
                 val json = """{"profile": "$led"}"""
                 
                 OutputStreamWriter(conn.outputStream).use { it.write(json) }
