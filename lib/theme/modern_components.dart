@@ -46,7 +46,7 @@ class ModernBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        border: border == null ? null : Border.all(color: border!, width: 1),
+        border: border == null ? null : Border.all(color: border, width: 1),
       ),
       child: Text(
         label.toUpperCase(),

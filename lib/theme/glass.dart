@@ -331,6 +331,6 @@ class GlowGlassCard extends GlassCard {
     super.radius,
     super.onTap,
     Color? glowColor,
-    Color? tint,
-  }) : super(tint: tint);
+    super.tint,
+  });
 }

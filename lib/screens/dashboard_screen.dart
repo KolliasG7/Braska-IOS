@@ -173,6 +173,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
 // ── Slide-up page route (shared export) ────────────────────────────────────
 
+// ignore: avoid_types_as_parameter_names
 class SlideUpRoute<T> extends PageRouteBuilder<T> {
   SlideUpRoute({required Widget child})
     : super(

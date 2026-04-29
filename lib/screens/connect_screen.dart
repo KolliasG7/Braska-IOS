@@ -674,21 +674,24 @@ class _ModeSegmented extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: Bk.glassBorder),
         ),
-        child: Stack(children: [
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
           // Sliding glass thumb. Uses an eased curve and the accent for a
           // soft glow so it feels like the pill physically moves.
           AnimatedPositioned(
-            // Spring-ish settle: a touch of overshoot makes the pill feel
-            // like it snaps into place instead of sliding over.
+            // Smooth settle: uses a gentler curve to prevent curvature
+            // artifacts during the slide animation.
             duration: reduceMotion
                 ? Duration.zero
-                : const Duration(milliseconds: 320),
-            curve: Curves.easeOutBack,
+                : const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
             left: isTunnel ? segW : 0,
             top: 0,
             bottom: 0,
             width: segW,
-            child: DecoratedBox(
+            child: Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Bk.glassRaised,
                 borderRadius: BorderRadius.circular(AppRadii.pill - pad),
