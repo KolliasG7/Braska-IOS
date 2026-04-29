@@ -646,6 +646,7 @@ class _ModeSegmented extends StatelessWidget {
   Widget build(BuildContext context) {
     const pad = 4.0;
     const height = 48.0;
+    final reduceMotion = context.watch<ConnectionProvider>().reduceMotion;
 
     return LayoutBuilder(builder: (ctx, box) {
       final segW = (box.maxWidth - pad * 2) / 2;
@@ -663,7 +664,11 @@ class _ModeSegmented extends StatelessWidget {
           children: [
           // Sliding glass thumb. Uses an eased curve and the accent for a
           // soft glow so it feels like the pill physically moves.
-          Positioned(
+          AnimatedPositioned(
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
             left: isTunnel ? segW : 0,
             top: 0,
             bottom: 0,
