@@ -1,7 +1,12 @@
 import 'api_service.dart';
+import 'payload_sender_service.dart';
 
 class ErrorFormatter {
   static String userMessage(dynamic error) {
+    if (error is PayloadException) {
+      return error.message;
+    }
+
     if (error is ApiException) {
       if (error.statusCode == 401) return 'Authentication failed. Please login again.';
       if (error.statusCode == 403) return 'Permission denied for this action.';
@@ -22,6 +27,12 @@ class ErrorFormatter {
     }
     if (msg.contains('TimeoutException') || msg.toLowerCase().contains('timed out')) {
       return 'Connection timed out. Please retry.';
+    }
+    if (msg.contains('FileSystemException')) {
+      return 'File system error. Check file permissions and paths.';
+    }
+    if (msg.contains('FormatException')) {
+      return 'Invalid data format received from server.';
     }
     return msg.replaceFirst('Exception: ', '');
   }

@@ -1,11 +1,18 @@
 // lib/services/ws_service.dart
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 import '../models/telemetry.dart';
 
 enum WsState { disconnected, connecting, connected }
+
+class WsException implements Exception {
+  WsException(this.message);
+  final String message;
+  @override String toString() => 'WsException: $message';
+}
 
 class WsService {
   WsService(this._baseUrl, {required this.token});
@@ -31,6 +38,8 @@ class WsService {
 
   bool _disposed = false;
   int  _retryS   = 2;
+  int _consecutiveFailures = 0;
+  static const int _maxConsecutiveFailures = 5;
 
   void updateUrl(String url) {
     _baseUrl = url;
@@ -57,6 +66,7 @@ class WsService {
     // keep firing in the background.
     disconnect();
     _retryS = 2;
+    _consecutiveFailures = 0;
     _tryConnect();
   }
 
@@ -82,8 +92,8 @@ class WsService {
       } else {
         uri = Uri.parse('ws://$_baseUrl/ws/telemetry');
       }
-    } catch (_) {
-      _scheduleReconnect();
+    } catch (e) {
+      _handleConnectionError('Invalid URL: $e');
       return;
     }
 
@@ -92,24 +102,47 @@ class WsService {
         uri,
         headers: <String, String>{'Authorization': 'Bearer $token'},
       );
-    } catch (_) {
-      _scheduleReconnect();
+    } catch (e) {
+      _handleConnectionError('Failed to create WebSocket: $e');
       return;
     }
 
     _sub = _ch!.stream.listen(
       (raw) {
         _retryS = 2;
+        _consecutiveFailures = 0;
         _setState(WsState.connected);
         try {
           final j = jsonDecode(raw as String) as Map<String, dynamic>;
           _ctrl.add(TelemetryFrame.fromJson(j));
-        } catch (_) {}
+        } catch (e) {
+          // Silently handle malformed JSON - log but don't break connection
+          debugPrint('[WsService] Failed to parse telemetry frame: $e');
+        }
       },
-      onError: (_) => _scheduleReconnect(),
-      onDone:  ()  => _scheduleReconnect(),
+      onError: (e) {
+        _handleConnectionError('WebSocket error: $e');
+      },
+      onDone:  ()  {
+        _handleConnectionError('WebSocket connection closed');
+      },
       cancelOnError: true,
     );
+  }
+
+  void _handleConnectionError(String error) {
+    if (_disposed) return;
+    _consecutiveFailures++;
+    debugPrint('[WsService] Connection error ($_consecutiveFailures/$_maxConsecutiveFailures): $error');
+
+    // If we've failed too many times consecutively, stop trying to reconnect
+    if (_consecutiveFailures >= _maxConsecutiveFailures) {
+      _setState(WsState.disconnected);
+      debugPrint('[WsService] Max consecutive failures reached, stopping reconnection attempts');
+      return;
+    }
+
+    _scheduleReconnect();
   }
 
   void _setState(WsState s) { _state = s; _stateCtrl.add(s); }

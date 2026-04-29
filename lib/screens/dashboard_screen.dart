@@ -77,89 +77,91 @@ class _DashboardScreenState extends State<DashboardScreen>
     final cpu    = frame?.cpu?.percent ?? 0;
     final reduceMotion = cp.reduceMotion;
 
-    return AppBackground(
-      child: FadeTransition(
-        opacity: _entranceFade,
-        child: SlideTransition(
-          position: _entranceSlide,
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            extendBody: true,
-            body: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  _TopBar(
-                    frame: frame,
-                    ws: cp.ws,
-                    onSettings: _openSettings,
-                  ),
-                  // Slim animated banner that only appears when the ws
-                  // connection is down mid-session. Driven by
-                  // ConnectionProvider.connState so it snaps shut the
-                  // moment the first frame comes back in.
-                  _ReconnectBanner(
-                    visible: cp.connState == ConnState.connecting
-                        && cp.frame != null,
-                    onRetry: () {
-                      HapticFeedback.selectionClick();
-                      cp.ws?.connect();
-                    },
-                  ),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      // Phased fade-through via [tabBodyTransition]: the
-                      // outgoing body vanishes in the first ~45% of the
-                      // reverse, then the incoming body fades up in the
-                      // last ~45% of the forward. The brief empty gap in
-                      // the middle is what prevents two glass layers from
-                      // blending into a ghosted mess.
-                      duration: reduceMotion
-                          ? Duration.zero
-                          : const Duration(milliseconds: 340),
-                      reverseDuration: reduceMotion
-                          ? Duration.zero
-                          : const Duration(milliseconds: 220),
-                      switchInCurve: Curves.linear,
-                      switchOutCurve: Curves.linear,
-                      layoutBuilder: stackedLayoutBuilder,
-                      transitionBuilder: tabBodyTransition,
-                      child: KeyedSubtree(
-                        key: ValueKey<int>(_tab),
-                        child: _tabBody(frame, cp),
+    return RepaintBoundary(
+      child: AppBackground(
+        child: FadeTransition(
+          opacity: _entranceFade,
+          child: SlideTransition(
+            position: _entranceSlide,
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              extendBody: true,
+              body: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    _TopBar(
+                      frame: frame,
+                      ws: cp.ws,
+                      onSettings: _openSettings,
+                    ),
+                    // Slim animated banner that only appears when the ws
+                    // connection is down mid-session. Driven by
+                    // ConnectionProvider.connState so it snaps shut the
+                    // moment the first frame comes back in.
+                    _ReconnectBanner(
+                      visible: cp.connState == ConnState.connecting
+                          && cp.frame != null,
+                      onRetry: () {
+                        HapticFeedback.selectionClick();
+                        cp.ws?.connect();
+                      },
+                    ),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        // Phased fade-through via [tabBodyTransition]: the
+                        // outgoing body vanishes in the first ~45% of the
+                        // reverse, then the incoming body fades up in the
+                        // last ~45% of the forward. The brief empty gap in
+                        // the middle is what prevents two glass layers from
+                        // blending into a ghosted mess.
+                        duration: reduceMotion
+                            ? Duration.zero
+                            : const Duration(milliseconds: 340),
+                        reverseDuration: reduceMotion
+                            ? Duration.zero
+                            : const Duration(milliseconds: 220),
+                        switchInCurve: Curves.linear,
+                        switchOutCurve: Curves.linear,
+                        layoutBuilder: stackedLayoutBuilder,
+                        transitionBuilder: tabBodyTransition,
+                        child: KeyedSubtree(
+                          key: ValueKey<int>(_tab),
+                          child: _tabBody(frame, cp),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            bottomNavigationBar: SafeArea(
-              top: false,
-              child: GlassBottomNav(
-                reduceMotion: reduceMotion,
-                selectedIndex: _tab,
-                onTap: (i) {
-                  setState(() => _tab = i);
-                },
-                destinations: [
-                  NavDestination(
-                    icon: Icons.monitor_heart_outlined,
-                    label: 'Monitor',
-                    badge: cpu > 80,
-                  ),
-                  const NavDestination(
-                    icon: Icons.tune_outlined,
-                    label: 'Control',
-                  ),
-                  const NavDestination(
-                    icon: Icons.terminal_outlined,
-                    label: 'Shell',
-                  ),
-                  const NavDestination(
-                    icon: Icons.folder_outlined,
-                    label: 'Files',
-                  ),
-                ],
+              bottomNavigationBar: SafeArea(
+                top: false,
+                child: GlassBottomNav(
+                  reduceMotion: reduceMotion,
+                  selectedIndex: _tab,
+                  onTap: (i) {
+                    setState(() => _tab = i);
+                  },
+                  destinations: [
+                    NavDestination(
+                      icon: Icons.monitor_heart_outlined,
+                      label: 'Monitor',
+                      badge: cpu > 80,
+                    ),
+                    const NavDestination(
+                      icon: Icons.tune_outlined,
+                      label: 'Control',
+                    ),
+                    const NavDestination(
+                      icon: Icons.terminal_outlined,
+                      label: 'Shell',
+                    ),
+                    const NavDestination(
+                      icon: Icons.folder_outlined,
+                      label: 'Files',
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

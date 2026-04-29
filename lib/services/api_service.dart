@@ -233,6 +233,15 @@ class ApiService {
   // ── System ──────────────────────────────────────────────────────────
 
   Future<List<ProcessInfo>> getProcesses({int limit = 50, String sortBy = 'cpu'}) async {
+    // Validate input parameters
+    if (limit < 1 || limit > 1000) {
+      throw ApiException(400, 'Limit must be between 1 and 1000');
+    }
+    final validSortFields = ['cpu', 'memory', 'name', 'pid'];
+    if (!validSortFields.contains(sortBy)) {
+      throw ApiException(400, 'Invalid sort field. Must be one of: ${validSortFields.join(', ')}');
+    }
+
     return _retry.execute(
       () async {
         final r = await http.get(

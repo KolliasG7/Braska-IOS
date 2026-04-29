@@ -115,10 +115,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _sendPayload() async {
     final ip   = _ipCtrl.text.trim();
     final port = int.tryParse(_portCtrl.text.trim()) ?? 9023;
-    if (ip.isEmpty) { _snack('Enter a target IP address', danger: true); return; }
-    if (_selectedFile == null) {
-      _snack('Select a payload file first', danger: true); return;
+
+    // Validate IP address format
+    final ipRegex = RegExp(r'^(\d{1,3}\.){3}\d{1,3}$');
+    if (ip.isEmpty) {
+      _snack('Enter a target IP address', danger: true);
+      return;
     }
+    if (!ipRegex.hasMatch(ip)) {
+      _snack('Invalid IP address format', danger: true);
+      return;
+    }
+
+    // Validate IP octets
+    final octets = ip.split('.');
+    for (final octet in octets) {
+      final value = int.tryParse(octet);
+      if (value == null || value < 0 || value > 255) {
+        _snack('Invalid IP address: each octet must be 0-255', danger: true);
+        return;
+      }
+    }
+
+    // Validate port
+    if (port <= 0 || port > 65535) {
+      _snack('Invalid port: must be between 1 and 65535', danger: true);
+      return;
+    }
+
+    if (_selectedFile == null) {
+      _snack('Select a payload file first', danger: true);
+      return;
+    }
+
+    // Validate file exists and is not empty
+    if (!await _selectedFile!.exists()) {
+      _snack('Selected file does not exist', danger: true);
+      return;
+    }
+    if (await _selectedFile!.length() == 0) {
+      _snack('Selected file is empty', danger: true);
+      return;
+    }
+
     await _saveTarget(ip, port);
     setState(() => _sending = true);
     await _injectPayload(ip, port, _selectedFile!);

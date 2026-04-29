@@ -1,6 +1,5 @@
 // lib/theme/glass_enhanced.dart — Enhanced glassmorphism with iOS 26 features
 import 'dart:ui';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'tokens.dart';
 import 'glass.dart';
@@ -45,6 +44,12 @@ class _AnimatedLiquidGlassSheenState extends State<AnimatedLiquidGlassSheen>
 
   @override
   Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     Widget stack = IgnorePointer(
       child: Stack(
         fit: StackFit.expand,

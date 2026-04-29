@@ -1,10 +1,17 @@
 // lib/services/terminal_service.dart
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
 enum TermState { disconnected, connecting, connected }
+
+class TerminalException implements Exception {
+  TerminalException(this.message);
+  final String message;
+  @override String toString() => 'TerminalException: $message';
+}
 
 class TerminalService {
   TerminalService(this._baseUrl, {required this.token});
@@ -30,10 +37,13 @@ class TerminalService {
 
   bool _disposed = false;
   int  _retryS   = 2;
+  int _consecutiveFailures = 0;
+  static const int _maxConsecutiveFailures = 5;
 
   void connect() {
     if (_disposed) return;
     _retryS = 2;
+    _consecutiveFailures = 0;
     disconnect();
     _tryConnect();
   }
@@ -56,8 +66,8 @@ class TerminalService {
       } else {
         uri = Uri.parse('ws://$_baseUrl/ws/terminal');
       }
-    } catch (_) {
-      _scheduleReconnect();
+    } catch (e) {
+      _handleConnectionError('Invalid URL: $e');
       return;
     }
 
@@ -69,14 +79,15 @@ class TerminalService {
       _ch!.ready.then((_) {
         if (_disposed) return;
         _retryS = 2;
+        _consecutiveFailures = 0;
         _setState(TermState.connected);
       }).catchError((e) {
         if (!_disposed) {
-          _scheduleReconnect();
+          _handleConnectionError('WebSocket ready failed: $e');
         }
       });
     } catch (e) {
-      _scheduleReconnect();
+      _handleConnectionError('Failed to create WebSocket: $e');
       return;
     }
 
@@ -90,23 +101,40 @@ class TerminalService {
       },
       onError: (e) {
         if (!_disposed) {
-          _scheduleReconnect();
+          _handleConnectionError('WebSocket error: $e');
         }
       },
       onDone:  () {
         if (!_disposed) {
-          _scheduleReconnect();
+          _handleConnectionError('WebSocket connection closed');
         }
       },
       cancelOnError: true,
     );
   }
 
+  void _handleConnectionError(String error) {
+    if (_disposed) return;
+    _consecutiveFailures++;
+    debugPrint('[TerminalService] Connection error ($_consecutiveFailures/$_maxConsecutiveFailures): $error');
+
+    // If we've failed too many times consecutively, stop trying to reconnect
+    if (_consecutiveFailures >= _maxConsecutiveFailures) {
+      _setState(TermState.disconnected);
+      debugPrint('[TerminalService] Max consecutive failures reached, stopping reconnection attempts');
+      return;
+    }
+
+    _scheduleReconnect();
+  }
+
   void sendInput(String text) {
     if (_disposed) return;
     try {
       _ch?.sink.add(text);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[TerminalService] Failed to send input: $e');
+    }
   }
 
   void sendResize(int cols, int rows) {
@@ -114,7 +142,9 @@ class TerminalService {
     final msg = jsonEncode({'type': 'resize', 'cols': cols, 'rows': rows});
     try {
       _ch?.sink.add(msg);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[TerminalService] Failed to send resize: $e');
+    }
   }
 
   void _setState(TermState s) {

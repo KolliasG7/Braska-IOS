@@ -130,18 +130,13 @@ class _ConnectScreenState extends State<ConnectScreen>
               onPressed: () async {
                 Navigator.pop(ctx);
                 await cp.login(ctrl.text);
+                ctrl.dispose();
               },
               child: const Text('Unlock')),
           ],
         ),
       ),
     );
-
-    // TextEditingController.dispose() is safe to call after the widget has
-    // unmounted, so no `mounted` guard here — otherwise the controller would
-    // leak whenever the connect screen is swapped out while the dialog is
-    // still dismissing.
-    Future.delayed(AppDurations.med, ctrl.dispose);
   }
 
   void _useTunnelUrl(String url) {
@@ -418,16 +413,34 @@ class _ConnectScreenState extends State<ConnectScreen>
       ),
     );
 
-    // Dispose unconditionally — `TextEditingController.dispose()` is safe
-    // regardless of widget lifecycle, and the `mounted` guard would leak
-    // the controllers when the user disconnects mid-dialog.
-    Future.delayed(AppDurations.med, () {
-      ipCtrl.dispose();
-      portCtrl.dispose();
-    });
+    ipCtrl.dispose();
+    portCtrl.dispose();
   }
 
   Future<void> _injectPayload(String ip, int port, File file) async {
+    // Validate IP address format
+    final ipRegex = RegExp(r'^(\d{1,3}\.){3}\d{1,3}$');
+    if (!ipRegex.hasMatch(ip)) {
+      _snack('Invalid IP address format', danger: true);
+      return;
+    }
+
+    // Validate IP octets
+    final octets = ip.split('.');
+    for (final octet in octets) {
+      final value = int.tryParse(octet);
+      if (value == null || value < 0 || value > 255) {
+        _snack('Invalid IP address: each octet must be 0-255', danger: true);
+        return;
+      }
+    }
+
+    // Validate port
+    if (port <= 0 || port > 65535) {
+      _snack('Invalid port: must be between 1 and 65535', danger: true);
+      return;
+    }
+
     if (!mounted) return;
     _snack('Connecting to $ip:$port…');
     try {

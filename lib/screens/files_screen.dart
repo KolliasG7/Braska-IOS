@@ -34,15 +34,31 @@ class _FilesScreenState extends State<FilesScreen> {
   // while a prior listing is still in flight, or when _navigate/_load fire
   // in quick succession on a slow link.
   bool _loadInFlight = false;
+  // Cancel token for in-flight requests
+  bool _cancelled = false;
 
   @override void initState() { super.initState(); _load(_defaultPath); }
 
   Future<void> _load(String path) async {
-    if (_loadInFlight) return;
+    if (_loadInFlight) {
+      // Cancel any in-flight request by setting the flag
+      _cancelled = true;
+      // Wait a brief moment for the cancelled request to finish
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+
     _loadInFlight = true;
+    _cancelled = false;
     setState(() { _loading = true; _err = null; });
+
     try {
       final data = await widget.api.listFiles(path);
+
+      // Check if this request was cancelled
+      if (_cancelled) {
+        return;
+      }
+
       if (!mounted) return;
       // Backend returns {"error":"…","items":[]} (no 'path' field) when the
       // requested path is outside the allowlist. Surface that as a normal
@@ -68,6 +84,11 @@ class _FilesScreenState extends State<FilesScreen> {
         _lastSuccess = _lastUpdated;
       });
     } catch (e) {
+      // Don't update state if this request was cancelled
+      if (_cancelled) {
+        return;
+      }
+
       if (!mounted) return;
       setState(() {
         _err = e.toString();

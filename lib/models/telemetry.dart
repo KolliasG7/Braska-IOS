@@ -149,14 +149,14 @@ class TelemetryFrame {
     }
     return TelemetryFrame(
       ts:      _num(j['ts']),
-      fan:     j['fan'] is Map ? FanData.fromJson(Map<String, dynamic>.from(j['fan'])) : null,
-      cpu:     j['cpu'] is Map ? CpuData.fromJson(Map<String, dynamic>.from(j['cpu'])) : null,
-      ram:     j['ram'] is Map ? RamData.fromJson(Map<String, dynamic>.from(j['ram'])) : null,
-      swap:    j['swap'] is Map ? SwapData.fromJson(Map<String, dynamic>.from(j['swap'])) : null,
+      fan:     j['fan'] is Map ? FanData.fromJson(Map<String, dynamic>.from(j['fan'] as Map)) : null,
+      cpu:     j['cpu'] is Map ? CpuData.fromJson(Map<String, dynamic>.from(j['cpu'] as Map)) : null,
+      ram:     j['ram'] is Map ? RamData.fromJson(Map<String, dynamic>.from(j['ram'] as Map)) : null,
+      swap:    j['swap'] is Map ? SwapData.fromJson(Map<String, dynamic>.from(j['swap'] as Map)) : null,
       disk:    _mapList(j['disk']).map(DiskData.fromJson).toList(),
       net:     _mapList(j['net']).map(NetData.fromJson).toList(),
       uptimeS: _int(j['uptime_s']),
-      tunnel:  j['tunnel'] is Map ? TunnelStatus.fromJson(Map<String, dynamic>.from(j['tunnel'])) : null,
+      tunnel:  j['tunnel'] is Map ? TunnelStatus.fromJson(Map<String, dynamic>.from(j['tunnel'] as Map)) : null,
     );
   }
 
