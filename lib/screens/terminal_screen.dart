@@ -26,9 +26,11 @@ class _TerminalScreenState extends State<TerminalScreen>
   final _lines      = <String>[];
   StreamSubscription? _outSub;
   StreamSubscription? _stateSub;
+  StreamSubscription? _errorSub;
   bool _connected = false;
   bool _initFailed = false;
   String _partial = '';
+  String? _lastError;
 
   /// Send a raw byte sequence to the pty and keep focus on the input so
   /// the iOS soft keyboard stays up while the user chains accessory keys.
@@ -52,6 +54,11 @@ class _TerminalScreenState extends State<TerminalScreen>
     _outSub   = _term!.output.listen(_onOutput);
     _stateSub = _term!.state.listen((s) {
       if (mounted) setState(() => _connected = s == TermState.connected);
+    });
+    _errorSub = _term!.errors.listen((msg) {
+      if (!mounted) return;
+      setState(() => _lastError = msg);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     });
     _term!.connect();
   }
@@ -119,7 +126,7 @@ class _TerminalScreenState extends State<TerminalScreen>
           child: GlassCard(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: (_lines.isEmpty && _partial.isEmpty)
-                ? _IdlePrompt(connected: _connected)
+                ? _IdlePrompt(connected: _connected, error: _lastError)
                 : ListView.builder(
                     controller: _scrollCtrl,
                     itemCount: _lines.length + (_partial.isNotEmpty ? 1 : 0),
@@ -180,6 +187,7 @@ class _TerminalScreenState extends State<TerminalScreen>
     WidgetsBinding.instance.removeObserver(this);
     _outSub?.cancel();
     _stateSub?.cancel();
+    _errorSub?.cancel();
     _term?.dispose();
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
@@ -189,16 +197,16 @@ class _TerminalScreenState extends State<TerminalScreen>
 }
 
 class _IdlePrompt extends StatelessWidget {
-  const _IdlePrompt({required this.connected});
+  const _IdlePrompt({required this.connected, this.error});
   final bool connected;
+  final String? error;
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.topLeft,
       child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             r'$ ',
@@ -207,13 +215,17 @@ class _IdlePrompt extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          Text(
-            connected
-                ? 'session idle · type a command to begin'
-                : 'connecting…',
-            style: T.mono.copyWith(
-              color: Bk.textSec.withValues(alpha:0.55),
-              fontStyle: FontStyle.italic,
+          Expanded(
+            child: Text(
+              connected
+                  ? 'session idle - type a command to begin'
+                  : (error ?? 'connecting...'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: T.mono.copyWith(
+                color: connected ? Bk.textSec.withValues(alpha: 0.55) : Bk.warn,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
         ],
@@ -472,3 +484,4 @@ class _KbChip extends StatelessWidget {
     );
   }
 }
+

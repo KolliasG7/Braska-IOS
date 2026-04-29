@@ -28,12 +28,16 @@ class TerminalService {
 
   final _outCtrl   = StreamController<String>.broadcast();
   final _stateCtrl = StreamController<TermState>.broadcast();
+  final _errorCtrl = StreamController<String>.broadcast();
 
   Stream<String>    get output => _outCtrl.stream;
   Stream<TermState> get state  => _stateCtrl.stream;
+  Stream<String>    get errors => _errorCtrl.stream;
 
   TermState _state = TermState.disconnected;
   TermState get currentState => _state;
+  String? _lastError;
+  String? get lastError => _lastError;
 
   bool _disposed = false;
   int  _retryS   = 2;
@@ -117,10 +121,12 @@ class TerminalService {
     if (_disposed) return;
     _consecutiveFailures++;
     debugPrint('[TerminalService] Connection error ($_consecutiveFailures/$_maxConsecutiveFailures): $error');
+    _lastError = error;
 
     // If we've failed too many times consecutively, stop trying to reconnect
     if (_consecutiveFailures >= _maxConsecutiveFailures) {
       _setState(TermState.disconnected);
+      _errorCtrl.add('Shell reconnect failed after $_maxConsecutiveFailures attempts.');
       debugPrint('[TerminalService] Max consecutive failures reached, stopping reconnection attempts');
       return;
     }
@@ -180,5 +186,6 @@ class TerminalService {
     disconnect();
     _outCtrl.close();
     _stateCtrl.close();
+    _errorCtrl.close();
   }
 }

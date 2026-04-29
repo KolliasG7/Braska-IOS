@@ -29,12 +29,16 @@ class WsService {
   Timer? _reconnectTimer;
   final _ctrl      = StreamController<TelemetryFrame>.broadcast();
   final _stateCtrl = StreamController<WsState>.broadcast();
+  final _errorCtrl = StreamController<String>.broadcast();
 
   Stream<TelemetryFrame> get stream => _ctrl.stream;
   Stream<WsState>        get state  => _stateCtrl.stream;
+  Stream<String>         get errors => _errorCtrl.stream;
 
   WsState _state = WsState.disconnected;
   WsState get currentState => _state;
+  String? _lastError;
+  String? get lastError => _lastError;
 
   bool _disposed = false;
   int  _retryS   = 2;
@@ -134,10 +138,12 @@ class WsService {
     if (_disposed) return;
     _consecutiveFailures++;
     debugPrint('[WsService] Connection error ($_consecutiveFailures/$_maxConsecutiveFailures): $error');
+    _lastError = error;
 
     // If we've failed too many times consecutively, stop trying to reconnect
     if (_consecutiveFailures >= _maxConsecutiveFailures) {
       _setState(WsState.disconnected);
+      _errorCtrl.add('Telemetry reconnect failed after $_maxConsecutiveFailures attempts.');
       debugPrint('[WsService] Max consecutive failures reached, stopping reconnection attempts');
       return;
     }
@@ -175,5 +181,6 @@ class WsService {
     disconnect();
     _ctrl.close();
     _stateCtrl.close();
+    _errorCtrl.close();
   }
 }

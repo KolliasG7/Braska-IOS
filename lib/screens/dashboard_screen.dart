@@ -102,6 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     _ReconnectBanner(
                       visible: cp.connState == ConnState.connecting
                           && cp.frame != null,
+                      message: cp.ws?.lastError,
                       onRetry: () {
                         HapticFeedback.selectionClick();
                         cp.ws?.connect();
@@ -662,9 +663,11 @@ class _ErrorCard extends StatelessWidget {
 class _ReconnectBanner extends StatelessWidget {
   const _ReconnectBanner({
     required this.visible,
+    this.message,
     required this.onRetry,
   });
   final bool visible;
+  final String? message;
   final VoidCallback onRetry;
 
   @override
@@ -702,6 +705,20 @@ class _ReconnectBanner extends StatelessWidget {
                       style: TextStyle(
                         color: Bk.warn, fontSize: 12,
                         fontWeight: FontWeight.w700, letterSpacing: 0.2))),
+                    if (message != null && message!.isNotEmpty) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          message!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Bk.textSec,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
                     TextButton(
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(

@@ -114,6 +114,12 @@ class ConnectionProvider extends ChangeNotifier {
   Future<void> connect(String input) async {
     bool authRequired = false;
     _rawInput  = input.trim();
+    if (!_isValidInput(_rawInput)) {
+      _error = 'Invalid host or URL. Use host:port (e.g. 192.168.1.116:8765) or https://...';
+      _connState = ConnState.error;
+      notifyListeners();
+      return;
+    }
     _isTunnel  = _detectTunnel(_rawInput);
     _error     = null;
     _connState = ConnState.connecting;
@@ -333,6 +339,21 @@ class ConnectionProvider extends ChangeNotifier {
   String _effectiveBase(String input) {
     if (_detectTunnel(input)) return input.startsWith('http') ? input : 'https://$input';
     return input;
+  }
+
+  bool _isValidInput(String input) {
+    if (input.isEmpty) return false;
+    if (_detectTunnel(input)) {
+      final normalized = input.startsWith('http') ? input : 'https://$input';
+      final uri = Uri.tryParse(normalized);
+      return uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && uri.host.isNotEmpty;
+    }
+    final hostPort = RegExp(r'^[a-zA-Z0-9.-]+(?::\d{1,5})?$');
+    if (!hostPort.hasMatch(input)) return false;
+    final portPart = input.contains(':') ? input.split(':').last : null;
+    if (portPart == null || portPart.isEmpty) return true;
+    final p = int.tryParse(portPart);
+    return p != null && p >= 1 && p <= 65535;
   }
 
   @override

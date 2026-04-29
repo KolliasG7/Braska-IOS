@@ -15,7 +15,7 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('STRAWBERRY'), findsOneWidget);
-    expect(find.text('MANAGER'), findsOneWidget);
+    expect(find.text('Strawberry Manager'), findsOneWidget);
+    expect(find.text('Connect'), findsOneWidget);
   });
 }
