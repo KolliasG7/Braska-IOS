@@ -203,7 +203,7 @@ class _IdlePrompt extends StatelessWidget {
           Text(
             r'$ ',
             style: T.mono.copyWith(
-              color: Bk.accent.withOpacity(0.55),
+              color: Bk.accent.withValues(alpha:0.55),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -212,7 +212,7 @@ class _IdlePrompt extends StatelessWidget {
                 ? 'session idle · type a command to begin'
                 : 'connecting…',
             style: T.mono.copyWith(
-              color: Bk.textSec.withOpacity(0.55),
+              color: Bk.textSec.withValues(alpha:0.55),
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -402,7 +402,7 @@ class _ShellKeyboardBar extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(
           AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xs),
       decoration: BoxDecoration(
-        color: Bk.surface1.withOpacity(0.55),
+        color: Bk.surface1.withValues(alpha:0.55),
         borderRadius: BorderRadius.circular(AppRadii.pill),
         border: Border.all(color: Bk.glassBorder),
       ),
@@ -452,7 +452,7 @@ class _KbChip extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Bk.glassDefault.withOpacity(0.6),
+              color: Bk.glassDefault.withValues(alpha:0.6),
               borderRadius: BorderRadius.circular(AppRadii.sm),
               border: Border.all(color: Bk.glassBorder),
             ),

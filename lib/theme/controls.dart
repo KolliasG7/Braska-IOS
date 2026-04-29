@@ -38,7 +38,7 @@ class AppButton extends StatelessWidget {
     final (bg, fg, border) = switch (variant) {
       ButtonVariant.primary     => (Bk.accent,        const Color(0xFF06141E), null),
       ButtonVariant.glass       => (Bk.glassDefault,  Bk.textPri,              Bk.glassBorderHi),
-      ButtonVariant.destructive => (Bk.danger.withOpacity(0.18), Bk.danger,    Bk.danger.withOpacity(0.45)),
+      ButtonVariant.destructive => (Bk.danger.withValues(alpha:0.18), Bk.danger,    Bk.danger.withValues(alpha:0.45)),
     };
 
     final padding = switch (size) {
@@ -87,7 +87,7 @@ class AppButton extends StatelessWidget {
             borderRadius: radius,
             boxShadow: disabled ? null : [
               BoxShadow(
-                color: Bk.accent.withOpacity(0.3),
+                color: Bk.accent.withValues(alpha:0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
                 spreadRadius: -2,
@@ -128,8 +128,8 @@ class AppButton extends StatelessWidget {
           onPressed?.call();
         },
         borderRadius: radius,
-        splashColor: Bk.accent.withOpacity(0.1),
-        highlightColor: Bk.accent.withOpacity(0.05),
+        splashColor: Bk.accent.withValues(alpha:0.1),
+        highlightColor: Bk.accent.withValues(alpha:0.05),
         child: body,
       ),
     );
@@ -163,8 +163,8 @@ class GlassIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, border, iconColor) = switch (variant) {
       IconButtonVariant.glass => (Bk.glassDefault, Bk.glassBorder, Bk.textPri),
-      IconButtonVariant.accent => (Bk.accent.withOpacity(0.15), Bk.accent, Bk.accent),
-      IconButtonVariant.danger => (Bk.danger.withOpacity(0.15), Bk.danger, Bk.danger),
+      IconButtonVariant.accent => (Bk.accent.withValues(alpha:0.15), Bk.accent, Bk.accent),
+      IconButtonVariant.danger => (Bk.danger.withValues(alpha:0.15), Bk.danger, Bk.danger),
     };
 
     Widget btn = ClipOval(
@@ -203,8 +203,8 @@ class GlassIconButton extends StatelessWidget {
           HapticFeedback.selectionClick();
           onPressed!.call();
         },
-        splashColor: Bk.accent.withOpacity(0.15),
-        highlightColor: Bk.accent.withOpacity(0.08),
+        splashColor: Bk.accent.withValues(alpha:0.15),
+        highlightColor: Bk.accent.withValues(alpha:0.08),
         child: btn,
       ),
     );
@@ -243,7 +243,7 @@ class SectionHeader extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             subtitle!,
-            style: TextStyle(
+            style: const TextStyle(
               color: Bk.textDim,
               fontSize: 11,
               fontWeight: FontWeight.w500,
@@ -295,7 +295,7 @@ class StatCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Bk.textSec,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -307,7 +307,7 @@ class StatCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: trendColor.withOpacity(0.15),
+                    color: trendColor.withValues(alpha:0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -338,7 +338,7 @@ class StatCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   unit!,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Bk.textDim,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -403,7 +403,7 @@ class ThinBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(radius),
               boxShadow: [
                 BoxShadow(
-                  color: gradient.first.withOpacity(0.3),
+                  color: gradient.first.withValues(alpha:0.3),
                   blurRadius: 8,
                   spreadRadius: 2,
                 ),

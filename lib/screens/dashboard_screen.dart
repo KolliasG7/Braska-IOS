@@ -618,8 +618,8 @@ class _TopProcRow extends StatelessWidget {
 class _Wait extends StatelessWidget {
   const _Wait();
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(mainAxisSize: MainAxisSize.min, children: const [
+  Widget build(BuildContext context) => const Center(
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
         width: 24, height: 24,
         child: CircularProgressIndicator(

@@ -109,7 +109,7 @@ class _ProcessesScreenState extends State<ProcessesScreen>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Error: $e',
           style: const TextStyle(color: Bk.textPri)),
-        backgroundColor: Bk.danger.withOpacity(0.9),
+        backgroundColor: Bk.danger.withValues(alpha:0.9),
         behavior: SnackBarBehavior.floating,
       ));
     }
@@ -191,10 +191,10 @@ class _ProcessesScreenState extends State<ProcessesScreen>
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
+            const Padding(
+              padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.xl + AppSpacing.xs),
-              child: Row(children: const [
+              child: Row(children: [
                 SizedBox(width: 52, child: Text('PID', style: T.label)),
                 Expanded(flex: 3, child: Text('NAME', style: T.label)),
                 SizedBox(width: 52, child: Text('CPU%',
@@ -294,9 +294,9 @@ class _Header extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Bk.accent.withOpacity(0.18),
+                  color: Bk.accent.withValues(alpha:0.18),
                   borderRadius: BorderRadius.circular(AppRadii.sm),
-                  border: Border.all(color: Bk.accent.withOpacity(0.4)),
+                  border: Border.all(color: Bk.accent.withValues(alpha:0.4)),
                 ),
                 child: Text('$count',
                   style: const TextStyle(
@@ -394,12 +394,12 @@ class _SigBtn extends StatelessWidget {
   Widget build(BuildContext context) => ElevatedButton(
     onPressed: onTap,
     style: ElevatedButton.styleFrom(
-      backgroundColor: color.withOpacity(0.14),
+      backgroundColor: color.withValues(alpha:0.14),
       foregroundColor: color,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.md),
-        side: BorderSide(color: color.withOpacity(0.38))),
+        side: BorderSide(color: color.withValues(alpha:0.38))),
       padding: const EdgeInsets.symmetric(vertical: 14),
     ),
     child: Text(label,

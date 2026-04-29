@@ -77,7 +77,7 @@ class _FanControlCardState extends State<FanControlCard> {
                  : displayVal >= 55 ? Bk.amber : Bk.cyan;
 
     return GlassCard(
-      tint: tColor.withOpacity(0.06),
+      tint: tColor.withValues(alpha:0.06),
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.lg),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -102,10 +102,10 @@ class _FanControlCardState extends State<FanControlCard> {
                   child: CircularProgressIndicator(
                     strokeWidth: 2, color: tColor))
               : _confirmed != null
-                ? Row(
-                    key: const ValueKey('ok'),
+                ? const Row(
+                    key: ValueKey('ok'),
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(Icons.check_circle_outline,
                         color: Bk.success, size: 14),
                       SizedBox(width: 4),
@@ -141,7 +141,7 @@ class _FanControlCardState extends State<FanControlCard> {
             padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Text('°C',
               style: TextStyle(
-                color: tColor.withOpacity(0.7), fontSize: 18,
+                color: tColor.withValues(alpha:0.7), fontSize: 18,
                 fontWeight: FontWeight.w700, letterSpacing: -0.4)),
           ),
         ]),
@@ -170,11 +170,11 @@ class _FanControlCardState extends State<FanControlCard> {
         const SizedBox(height: 10),
 
         // Ticks.
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 46),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 46),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               _Tick('-10°'), _Tick('10°'),
               _Tick('25'), _Tick('35'), _Tick('45°'), _Tick('65°'), _Tick('80°'),
             ])),
@@ -269,9 +269,9 @@ class _GradientSlider extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
                     gradient: LinearGradient(colors: [
-                      Bk.cyan.withOpacity(0.18),
-                      Bk.amber.withOpacity(0.18),
-                      Bk.danger.withOpacity(0.22),
+                      Bk.cyan.withValues(alpha:0.18),
+                      Bk.amber.withValues(alpha:0.18),
+                      Bk.danger.withValues(alpha:0.22),
                     ]),
                     border: Border.all(color: Bk.glassBorder, width: 1),
                   ),
@@ -285,7 +285,7 @@ class _GradientSlider extends StatelessWidget {
                   child: SizedBox(
                     width: thumbX,
                     height: 8,
-                    child: DecoratedBox(
+                    child: const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(colors: [
                           Bk.cyan, Bk.amber, Bk.danger,
@@ -337,7 +337,7 @@ class _SliderThumb extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.35),
+            color: color.withValues(alpha:0.35),
             blurRadius: 14,
             spreadRadius: 1,
           ),

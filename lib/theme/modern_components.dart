@@ -26,7 +26,7 @@ class ModernBadge extends StatelessWidget {
     final (bg, fg, border) = switch (variant) {
       BadgeVariant.filled => (color, Bk.textPri, null),
       BadgeVariant.outlined => (Colors.transparent, color, color),
-      BadgeVariant.soft => (color.withOpacity(0.15), color, color.withOpacity(0.3)),
+      BadgeVariant.soft => (color.withValues(alpha:0.15), color, color.withValues(alpha:0.3)),
     };
 
     final padding = switch (size) {
@@ -106,7 +106,7 @@ class ModernAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: bg.withOpacity(0.3),
+            color: bg.withValues(alpha:0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -171,9 +171,9 @@ class ModernDivider extends StatelessWidget {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            (color ?? Bk.glassBorder).withOpacity(0),
+            (color ?? Bk.glassBorder).withValues(alpha:0),
             color ?? Bk.glassBorder,
-            (color ?? Bk.glassBorder).withOpacity(0),
+            (color ?? Bk.glassBorder).withValues(alpha:0),
           ],
           stops: const [0.0, 0.5, 1.0],
         ),
@@ -208,7 +208,7 @@ class ModernChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       radius: AppRadii.pill,
       style: selected ? GlassStyle.raised : GlassStyle.subtle,
-      tint: selected ? color.withOpacity(0.1) : null,
+      tint: selected ? color.withValues(alpha:0.1) : null,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -231,7 +231,7 @@ class ModernChip extends StatelessWidget {
                 HapticFeedback.selectionClick();
                 onDeleted!();
               },
-              child: Icon(
+              child: const Icon(
                 Icons.close,
                 size: 16,
                 color: Bk.textDim,
@@ -304,13 +304,13 @@ class ModernProgress extends StatelessWidget {
                     gradient: LinearGradient(
                       colors: [
                         color,
-                        color.withOpacity(0.7),
+                        color.withValues(alpha:0.7),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(height / 2),
                     boxShadow: [
                       BoxShadow(
-                        color: color.withOpacity(0.4),
+                        color: color.withValues(alpha:0.4),
                         blurRadius: 8,
                         spreadRadius: 1,
                       ),
@@ -361,7 +361,7 @@ class _ModernToggleState extends State<ModernToggle> {
           borderRadius: BorderRadius.circular(14),
           boxShadow: widget.value ? [
             BoxShadow(
-              color: widget.color.withOpacity(0.4),
+              color: widget.color.withValues(alpha:0.4),
               blurRadius: 8,
               spreadRadius: 1,
             ),
@@ -381,7 +381,7 @@ class _ModernToggleState extends State<ModernToggle> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha:0.2),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -411,10 +411,10 @@ class ModernAlert extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color, bg) = switch (type) {
-      AlertType.info => (Icons.info_outline, Bk.accent, Bk.accent.withOpacity(0.1)),
-      AlertType.success => (Icons.check_circle_outline, Bk.success, Bk.success.withOpacity(0.1)),
-      AlertType.warning => (Icons.warning_amber_outlined, Bk.warn, Bk.warn.withOpacity(0.1)),
-      AlertType.error => (Icons.error_outline, Bk.danger, Bk.danger.withOpacity(0.1)),
+      AlertType.info => (Icons.info_outline, Bk.accent, Bk.accent.withValues(alpha:0.1)),
+      AlertType.success => (Icons.check_circle_outline, Bk.success, Bk.success.withValues(alpha:0.1)),
+      AlertType.warning => (Icons.warning_amber_outlined, Bk.warn, Bk.warn.withValues(alpha:0.1)),
+      AlertType.error => (Icons.error_outline, Bk.danger, Bk.danger.withValues(alpha:0.1)),
     };
 
     return GlassCard(
@@ -428,7 +428,7 @@ class ModernAlert extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Bk.textPri,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -442,7 +442,7 @@ class ModernAlert extends StatelessWidget {
                 HapticFeedback.selectionClick();
                 onClose!();
               },
-              child: Icon(
+              child: const Icon(
                 Icons.close,
                 size: 18,
                 color: Bk.textDim,
@@ -526,12 +526,12 @@ class _ModernCardState extends State<ModernCard> {
           boxShadow: widget.elevation || (_hovered && widget.onTap != null)
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha:0.15),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
                   BoxShadow(
-                    color: Bk.accent.withOpacity(0.05),
+                    color: Bk.accent.withValues(alpha:0.05),
                     blurRadius: 30,
                     offset: const Offset(0, 4),
                   ),
@@ -548,8 +548,8 @@ class _ModernCardState extends State<ModernCard> {
                     widget.onTap!();
                   },
                   borderRadius: BorderRadius.circular(widget.radius),
-                  splashColor: Bk.accent.withOpacity(0.1),
-                  highlightColor: Bk.accent.withOpacity(0.05),
+                  splashColor: Bk.accent.withValues(alpha:0.1),
+                  highlightColor: Bk.accent.withValues(alpha:0.05),
                   child: Padding(
                     padding: widget.padding,
                     child: widget.child,

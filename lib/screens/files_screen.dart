@@ -453,7 +453,7 @@ class _FileRow extends StatelessWidget {
         Container(
           width: 34, height: 34,
           decoration: BoxDecoration(
-            color: (isDir ? Bk.accent : Bk.textSec).withOpacity(0.12),
+            color: (isDir ? Bk.accent : Bk.textSec).withValues(alpha:0.12),
             borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
           child: Icon(
@@ -525,12 +525,12 @@ class _FileSkeleton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       itemCount: 8,
-      itemBuilder: (_, __) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+      itemBuilder: (_, __) => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 6),
         child: GlassCard(
           style: GlassStyle.subtle,
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(children: const [
+          padding: EdgeInsets.all(AppSpacing.md),
+          child: Row(children: [
             _SkelBox(width: 34, height: 34),
             SizedBox(width: 12),
             Expanded(child: _SkelBox(width: double.infinity, height: 12)),
@@ -572,12 +572,12 @@ class _UploadFab extends StatelessWidget {
           onTap();
         },
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        child: GlassPill(
-          padding: const EdgeInsets.symmetric(
+        child: const GlassPill(
+          padding: EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),
           tint: Bk.accent,
           selected: true,
-          child: Row(mainAxisSize: MainAxisSize.min, children: const [
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.upload_outlined, size: 18, color: Bk.accent),
             SizedBox(width: 8),
             Text('Upload', style: TextStyle(
@@ -603,10 +603,10 @@ class _SwipeDeleteBg extends StatelessWidget {
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       decoration: BoxDecoration(
-        color: Bk.danger.withOpacity(0.85),
+        color: Bk.danger.withValues(alpha:0.85),
         borderRadius: BorderRadius.circular(AppRadii.md),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: const [
+      child: const Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.delete_outline, size: 20, color: Colors.white),
         SizedBox(width: 8),
         Text('Delete',
@@ -643,9 +643,9 @@ class _EmptyDir extends StatelessWidget {
                   Container(
                     width: 72, height: 72,
                     decoration: BoxDecoration(
-                      color: Bk.accent.withOpacity(0.08),
+                      color: Bk.accent.withValues(alpha:0.08),
                       border: Border.all(
-                        color: Bk.accent.withOpacity(0.25)),
+                        color: Bk.accent.withValues(alpha:0.25)),
                       borderRadius: BorderRadius.circular(AppRadii.lg),
                     ),
                     child: const Icon(

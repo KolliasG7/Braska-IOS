@@ -33,8 +33,8 @@ class LiquidGlassSheen extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.white.withOpacity(0.26 * intensity),
-                  Colors.white.withOpacity(0.06 * intensity),
+                  Colors.white.withValues(alpha:0.26 * intensity),
+                  Colors.white.withValues(alpha:0.06 * intensity),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.18, 0.55],
@@ -48,7 +48,7 @@ class LiquidGlassSheen extends StatelessWidget {
                 begin: const Alignment(-1.0, -1.0),
                 end: const Alignment(0.4, 0.3),
                 colors: [
-                  Colors.white.withOpacity(0.14 * intensity),
+                  Colors.white.withValues(alpha:0.14 * intensity),
                   Colors.transparent,
                 ],
               ),
@@ -61,7 +61,7 @@ class LiquidGlassSheen extends StatelessWidget {
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
                 colors: [
-                  Colors.black.withOpacity(0.10 * intensity),
+                  Colors.black.withValues(alpha:0.10 * intensity),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.35],
@@ -144,7 +144,7 @@ class GlassCard extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [tint!, tint!.withOpacity(0)],
+                  colors: [tint!, tint!.withValues(alpha:0)],
                 ),
               ),
               padding: padding,
@@ -179,13 +179,13 @@ class GlassCard extends StatelessWidget {
           borderRadius: borderRadius,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha:0.2),
               blurRadius: 28,
               offset: const Offset(0, 12),
               spreadRadius: -4,
             ),
             BoxShadow(
-              color: Bk.accent.withOpacity(0.08),
+              color: Bk.accent.withValues(alpha:0.08),
               blurRadius: 40,
               offset: const Offset(0, 4),
               spreadRadius: -8,
@@ -238,8 +238,8 @@ class GlassPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(radius);
     final baseTint = tint ?? Bk.accent;
-    final fill = selected ? baseTint.withOpacity(0.18) : Bk.glassDefault;
-    final borderColor = selected ? baseTint.withOpacity(0.55) : Bk.glassBorder;
+    final fill = selected ? baseTint.withValues(alpha:0.18) : Bk.glassDefault;
+    final borderColor = selected ? baseTint.withValues(alpha:0.55) : Bk.glassBorder;
 
     Widget inner = ClipRRect(
       borderRadius: borderRadius,
@@ -298,7 +298,7 @@ class GlassSheet extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
         child: Container(
           padding: padding,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Bk.glassDefault,
             border: Border(top: BorderSide(color: Bk.glassBorderHi, width: 1)),
           ),

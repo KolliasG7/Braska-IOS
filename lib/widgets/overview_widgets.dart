@@ -80,7 +80,7 @@ class _ArcP extends CustomPainter {
           startAngle: start, endAngle: start + sweep,
           tileMode: TileMode.clamp).createShader(rect)
         ..style = PaintingStyle.stroke..strokeWidth = 6..strokeCap = StrokeCap.round
-        ..maskFilter = MaskFilter.blur(BlurStyle.outer, 3));
+        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 3));
   }
   @override bool shouldRepaint(_ArcP o) => o.v != v || o.c != c;
 }
@@ -310,7 +310,7 @@ class RamCard extends StatelessWidget {
           ]),
           const SizedBox(height: 4),
           ThinBar(value: swap!.percent / 100,
-            gradient: [Bk.amber, Bk.orange], height: 3),
+            gradient: const [Bk.amber, Bk.orange], height: 3),
         ],
       ]),
     );

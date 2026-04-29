@@ -61,8 +61,8 @@ class _AnimatedLiquidGlassSheenState extends State<AnimatedLiquidGlassSheen>
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.white.withOpacity(0.26 * widget.intensity),
-                  Colors.white.withOpacity(0.06 * widget.intensity),
+                  Colors.white.withValues(alpha:0.26 * widget.intensity),
+                  Colors.white.withValues(alpha:0.06 * widget.intensity),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.18, 0.55],
@@ -76,7 +76,7 @@ class _AnimatedLiquidGlassSheenState extends State<AnimatedLiquidGlassSheen>
                 begin: const Alignment(-1.0, -1.0),
                 end: const Alignment(0.4, 0.3),
                 colors: [
-                  Colors.white.withOpacity(0.14 * widget.intensity),
+                  Colors.white.withValues(alpha:0.14 * widget.intensity),
                   Colors.transparent,
                 ],
               ),
@@ -95,7 +95,7 @@ class _AnimatedLiquidGlassSheenState extends State<AnimatedLiquidGlassSheen>
                       end: Alignment(1.0 + progress, 1.0 + progress * 0.5),
                       colors: [
                         Colors.transparent,
-                        Colors.white.withOpacity(0.15 * widget.intensity),
+                        Colors.white.withValues(alpha:0.15 * widget.intensity),
                         Colors.transparent,
                       ],
                       stops: const [0.0, 0.5, 1.0],
@@ -112,7 +112,7 @@ class _AnimatedLiquidGlassSheenState extends State<AnimatedLiquidGlassSheen>
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
                 colors: [
-                  Colors.black.withOpacity(0.10 * widget.intensity),
+                  Colors.black.withValues(alpha:0.10 * widget.intensity),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.35],
@@ -264,8 +264,8 @@ class _DepthGlassCardState extends State<DepthGlassCard> {
         child: InkWell(
           onTap: widget.onTap,
           borderRadius: borderRadius,
-          splashColor: Bk.accent.withOpacity(0.15),
-          highlightColor: Bk.accent.withOpacity(0.08),
+          splashColor: Bk.accent.withValues(alpha:0.15),
+          highlightColor: Bk.accent.withValues(alpha:0.08),
           child: content,
         ),
       );
@@ -302,12 +302,12 @@ class GlassRippleButton extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            splashColor: Bk.accent.withOpacity(0.2),
-            highlightColor: Bk.accent.withOpacity(0.1),
+            splashColor: Bk.accent.withValues(alpha:0.2),
+            highlightColor: Bk.accent.withValues(alpha:0.1),
             borderRadius: borderRadius,
             child: Ink(
               decoration: BoxDecoration(
-                gradient: RadialGradient(
+                gradient: const RadialGradient(
                   center: Alignment.topLeft,
                   radius: 1.5,
                   colors: [

@@ -65,8 +65,8 @@ class _Orb extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(colors: [
-            color.withOpacity(opacity),
-            color.withOpacity(0),
+            color.withValues(alpha:opacity),
+            color.withValues(alpha:0),
           ]),
         ),
       ),
@@ -143,13 +143,13 @@ class GlassBottomNav extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: Bk.accent.withOpacity(0.18),
+                          color: Bk.accent.withValues(alpha:0.18),
                           borderRadius: BorderRadius.circular(AppRadii.pill),
                           border: Border.all(
-                            color: Bk.accent.withOpacity(0.42), width: 1),
+                            color: Bk.accent.withValues(alpha:0.42), width: 1),
                           boxShadow: [
                             BoxShadow(
-                              color: Bk.accent.withOpacity(0.18),
+                              color: Bk.accent.withValues(alpha:0.18),
                               blurRadius: 14,
                               spreadRadius: -2,
                             ),

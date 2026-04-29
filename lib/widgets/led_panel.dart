@@ -76,7 +76,7 @@ class _LedPanelCardState extends State<LedPanelCard>
 
     return GlassCard(
       tint: activeMeta != null && _active != 'off'
-        ? activeMeta.color.withOpacity(0.08) : null,
+        ? activeMeta.color.withValues(alpha:0.08) : null,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Header
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -87,12 +87,12 @@ class _LedPanelCardState extends State<LedPanelCard>
               builder: (_, __) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: activeMeta.color.withOpacity(0.05 + _glowCtrl.value * 0.08),
+                  color: activeMeta.color.withValues(alpha:0.05 + _glowCtrl.value * 0.08),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: activeMeta.color.withOpacity(0.3 + _glowCtrl.value * 0.3)),
+                    color: activeMeta.color.withValues(alpha:0.3 + _glowCtrl.value * 0.3)),
                   boxShadow: [BoxShadow(
-                    color: activeMeta.color.withOpacity(0.15 + _glowCtrl.value * 0.15),
+                    color: activeMeta.color.withValues(alpha:0.15 + _glowCtrl.value * 0.15),
                     blurRadius: 8)],
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -100,7 +100,7 @@ class _LedPanelCardState extends State<LedPanelCard>
                     shape: BoxShape.circle,
                     color: activeMeta.color,
                     boxShadow: [BoxShadow(
-                      color: activeMeta.color.withOpacity(0.8), blurRadius: 6)],
+                      color: activeMeta.color.withValues(alpha:0.8), blurRadius: 6)],
                   )),
                   const SizedBox(width: 6),
                   Text(activeMeta.label, style: TextStyle(
@@ -169,7 +169,7 @@ class _LedBtn extends StatelessWidget {
             animation: glowAnim!,
             builder: (_, __) => Container(
               decoration: BoxDecoration(
-                color: Bk.white.withOpacity(0.12 + glowAnim!.value * 0.06),
+                color: Bk.white.withValues(alpha:0.12 + glowAnim!.value * 0.06),
                 border: Border.all(color: Bk.white),
                 borderRadius: BorderRadius.circular(12),
               ),
