@@ -46,7 +46,8 @@ class _ProcessesScreenState extends State<ProcessesScreen>
   }
 
   void _startPolling() {
-    _timer ??= Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
   }
 
   void _stopPolling() {

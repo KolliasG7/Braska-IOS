@@ -76,8 +76,10 @@ class GpuState {
   }
 
   bool get isManual => performanceLevel?.toLowerCase() == 'manual';
-  GpuLevel? get activeLevelObj => levels.cast<GpuLevel?>().firstWhere(
-        (l) => l?.active == true,
-        orElse: () => null,
-      );
+  GpuLevel? get activeLevelObj {
+    for (final l in levels) {
+      if (l.active) return l;
+    }
+    return null;
+  }
 }

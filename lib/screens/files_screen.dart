@@ -207,6 +207,7 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   void _snack(String msg, {bool success = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg, style: const TextStyle(color: Bk.textPri, fontSize: 12)),
       backgroundColor: Bk.surface1,

@@ -144,7 +144,7 @@ class ConnectionProvider extends ChangeNotifier {
     }
     if (!authRequired) {
       await _save();
-      _connectWs(base);
+      await _connectWs(base);
       return;
     }
     final tokenOk = await _api!.verifyToken();
@@ -154,7 +154,7 @@ class ConnectionProvider extends ChangeNotifier {
       return;
     }
     await _save();
-    _connectWs(base);
+    await _connectWs(base);
   }
 
   Future<void> login(String password) async {
@@ -170,10 +170,10 @@ class ConnectionProvider extends ChangeNotifier {
       return;
     }
     await _save();
-    _connectWs(_api!.baseUrl);
+    await _connectWs(_api!.baseUrl);
   }
 
-  void _connectWs(String base) async {
+  Future<void> _connectWs(String base) async {
     try {
       final profs = await _api!.getLedProfiles().timeout(const Duration(seconds: 5));
       final p = await SharedPreferences.getInstance();
@@ -248,7 +248,13 @@ class ConnectionProvider extends ChangeNotifier {
     _api = newApi;
     _ws  = newWs;
     _wsStateSub = _ws!.state.listen((s) {
-      if (s == WsState.connected) { _connState = ConnState.connected; notifyListeners(); }
+      if (s == WsState.connected && _connState != ConnState.connected) {
+        _connState = ConnState.connected;
+        notifyListeners();
+      } else if (s == WsState.disconnected && _connState == ConnState.connected) {
+        _connState = ConnState.connecting;
+        notifyListeners();
+      }
     });
     _wsSub = _ws!.stream.listen(_onFrame);
     _ws!.connect();

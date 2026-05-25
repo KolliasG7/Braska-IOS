@@ -244,9 +244,11 @@ class ApiService {
 
     return _retry.execute(
       () async {
-        final r = await http.get(
-          _u('/api/system/processes?limit=$limit&sort_by=$sortBy'), headers: _h,
-        ).timeout(const Duration(seconds: 10));
+        final uri = _u('/api/system/processes').replace(
+          queryParameters: {'limit': '$limit', 'sort_by': sortBy},
+        );
+        final r = await http.get(uri, headers: _h)
+            .timeout(const Duration(seconds: 10));
         _chk(r);
         final body = jsonDecode(r.body) as Map<String, dynamic>?;
         if (body == null) return const [];

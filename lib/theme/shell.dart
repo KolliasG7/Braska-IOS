@@ -1,4 +1,5 @@
 // lib/theme/shell.dart — App shell (gradient backdrop) and glass bottom nav.
+import 'dart:math' show pi;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -112,7 +113,7 @@ class _GlassVeil extends StatelessWidget {
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: Transform.rotate(
-        angle: angleDeg * 3.1415926535897932 / 180,
+        angle: angleDeg * pi / 180,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(52),
           child: Container(

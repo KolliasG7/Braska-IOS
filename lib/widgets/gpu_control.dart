@@ -67,6 +67,8 @@ class _GpuControlCardState extends State<GpuControlCard> {
       await widget.api.setGpuManual(enabled);
       if (!mounted) return;
       await _load();
+      if (!mounted) return;
+      setState(() { _writing = false; });
     } catch (e) {
       if (!mounted) return;
       setState(() {
